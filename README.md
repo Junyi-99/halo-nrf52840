@@ -72,11 +72,11 @@ Zephyr v4.4.2 is installed under `~/zephyrproject` (narrow checkout: zephyr, cms
 with the Zephyr SDK 1.0.1 ARM toolchain in `~/zephyr-sdk-1.0.1` (this machine is aarch64).
 
 ```sh
-./build.sh xiao_ble                   # Seeed XIAO nRF52840 (UF2)
-./build.sh nrf52840dongle/nrf52840    # Nordic PCA10059 dongle
-./build.sh nrf52840dk/nrf52840        # Nordic DK (J-Link)
-./build.sh nice_nano                  # nice!nano (UF2)
-./build.sh adafruit_feather_nrf52840  # Feather (UF2 variant)
+./build.sh xiao_ble                         # Seeed XIAO nRF52840 (UF2, app at 0x27000)
+./build.sh promicro_nrf52840/nrf52840/uf2   # Pro Micro / SuperMini / nice!nano clones (UF2, app at 0x26000)
+./build.sh nrf52840dongle/nrf52840          # Nordic PCA10059 dongle (Nordic DFU)
+./build.sh nrf52840dk/nrf52840              # Nordic DK (J-Link)
+./build.sh adafruit_feather_nrf52840        # Feather (UF2 variant)
 ```
 
 Outputs land in `build/<board>/zephyr/` as `zephyr.uf2` / `zephyr.hex`.
@@ -111,9 +111,17 @@ drive. Afterwards the firmware's `DFU` command reboots into the drive (GPREGRET 
 `tools/uf2_update.sh` does DFU + mount + copy in one go. `bootloader/xiao_nrf52840_ble_bootloader-*.hex`
 is the official Adafruit bootloader in case a board has lost it (flash over SWD, then UF2 as usual).
 
+### Pro Micro / SuperMini nRF52840 (nice!nano clones, UF2)
+
+Same as the XIAO with the `promicro_nrf52840/nrf52840/uf2` build. One check first: the app address
+depends on the SoftDevice the bootloader carries. Open the drive's `INFO_UF2.TXT`: `S140 6.1.1`
+(nice!nano layout) wants the Pro Micro build (0x26000); `S140 7.3.0` wants the XIAO build (0x27000,
+only the LED pin differs). Flashing the wrong one overwrites part of the SoftDevice and the board
+just drops back into the bootloader; re-copy the right UF2.
+
 ### Other boards
 
-- **nice!nano, Feather (UF2):** same as the XIAO.
+- **Feather (UF2):** same as the XIAO.
 - **Stock dongle with reset button:** reset into DFU, then the `nordicDfu` program step above.
 - **DK:** `west flash -d build/nrf52840dk_nrf52840` with J-Link, or `-r pyocd`.
 - **Any board over SWD, no bootloader:** `nrf52840dongle/nrf52840/bare` (code at 0x0).
