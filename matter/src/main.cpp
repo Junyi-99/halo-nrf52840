@@ -39,12 +39,10 @@ int main()
 		k_msleep(100);
 	}
 
-	if (crash_box.magic == CRASH_BOX_MAGIC) {
-		crash_box.mpsl_file[sizeof(crash_box.mpsl_file) - 1] = 0;
-		LOG_ERR("Previous boot ended in a fatal error: reason %u pc 0x%08x lr 0x%08x thread 0x%08x MPSL assert %s:%u",
-			crash_box.reason, crash_box.pc, crash_box.lr, crash_box.thread, crash_box.mpsl_file,
-			crash_box.mpsl_line);
-		crash_box.magic = 0;
+	/* A recorded crash stays in crash_box for the "halo crash" shell command;
+	 * a clean power-up leaves random RAM, which the magic value filters out.
+	 */
+	if (crash_box.magic != CRASH_BOX_MAGIC) {
 		crash_box.mpsl_file[0] = 0;
 		crash_box.mpsl_line = 0;
 	}

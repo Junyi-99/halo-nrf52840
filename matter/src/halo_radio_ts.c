@@ -20,14 +20,13 @@
 #include "halo_radio_ts.h"
 
 #define HALO_FREQUENCY   5u		/* 2405 MHz */
-#define SYMBOL_US        8u
 #define RX_HW_SYMBOLS    3u
 #define RX_BYTES         96u
 #define RX_WINDOW_US     1250u		/* ACK body ends ~715 us after our END */
 #define TX_TIMEOUT_US    1500u
+#define TICK_US          20u		/* RADIO poll period inside the slot */
 #define TIMESLOT_US      4000u		/* ramp 40 + TX 737 + RX 1250 + margins */
 #define RETRY_DELAY_MS   100
-#define RSSI_ENERGY_DBM  (-85)
 #define MIN_VERIFY_BITS  24u
 #define ACK_SEQ_BITS     (8u + HALO_ACK_BITS)
 #define MAX_SQUASHED     6u
@@ -67,8 +66,6 @@ static volatile uint32_t slot_tx_end_us;
 static volatile unsigned slot_radio_signals;
 static uint32_t phase_deadline_us;
 
-#define TICK_US 20u
-
 /* MPSL starts TIMER0 at 1 MHz when the timeslot begins and uses it for its own
  * end-of-slot bookkeeping, so it is never stopped, cleared or reconfigured here:
  * CC[0] is the application tick, CC[1] a capture register for reading time.
@@ -93,8 +90,6 @@ static void timer_check(void)
 		MPSL_TIMER0->TASKS_START = 1;
 	}
 }
-
-
 
 static void radio_configure(void)
 {
@@ -135,9 +130,10 @@ static void clear_events(void)
 }
 
 /* ---- Timeslot state machine (all at MPSL callback priority) ----------------
- * START: TX. RADIO signal: END of TX -> switch to RX; END of RX -> done.
- * TIMER0 signal: TX or RX window timeout -> done without ACK. The callback never
- * blocks for more than a few microseconds; the ACK is decoded in the thread.
+ * START: configure the RADIO and transmit. Every TICK_US a TIMER0 compare fires
+ * and the callback polls the RADIO: TX finished -> switch to RX; RX finished or
+ * the phase deadline passed -> finish and end the slot. The callback never blocks
+ * for more than a few microseconds; the ACK is decoded in the thread.
  */
 enum slot_state { SLOT_IDLE, SLOT_TX, SLOT_RX, SLOT_DONE };
 static volatile enum slot_state slot_state;
@@ -356,7 +352,11 @@ int halo_ts_init(void)
 
 void halo_ts_reboot_to_bootloader(void)
 {
-	NRF_POWER->GPREGRET = 0x57;
+#if defined(CONFIG_BOARD_NRF52840DONGLE)
+	NRF_POWER->GPREGRET = 0xb1;	/* Nordic open bootloader: BOOTLOADER_DFU_START */
+#else
+	NRF_POWER->GPREGRET = 0x57;	/* Adafruit UF2 bootloader: DFU_MAGIC_UF2_RESET */
+#endif
 	NVIC_SystemReset();
 }
 

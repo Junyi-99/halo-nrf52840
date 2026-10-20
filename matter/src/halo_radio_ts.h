@@ -32,7 +32,7 @@ typedef struct {
 	uint32_t tx_end_us;	/* last TX end time within the slot */
 } halo_ts_result_t;
 
-/* Reboot into the UF2 bootloader (Adafruit: GPREGRET = 0x57). */
+/* Reboot into the board's USB bootloader (Adafruit UF2 or Nordic DFU). */
 void halo_ts_reboot_to_bootloader(void);
 
 /* Open the MPSL timeslot session. Call once from a thread. */

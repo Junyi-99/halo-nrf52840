@@ -177,12 +177,16 @@ colour temperature from the Home app all reached the lamp with verified ACKs.
   154..370 mireds), regenerated with ZAP.
 - `matter/src/app_task.cpp`: Matter attribute changes → lamp state → sync thread → frames.
 - `matter/src/halo_radio_ts.c`: the timeslot radio driver.
-- Shell over USB CDC: `halo on|off|level N|temp MIREDS` drive the lamp directly, `halo dfu` reboots
-  into the UF2 bootloader, `matter onboardingcodes ble` prints the pairing code (test setup code
-  20202021, discriminator 0xF00, manual pairing code 34970112332, uncertified test vendor 0xFFF1 which
-  Apple Home accepts after a warning).
-- Flash: `matter/build/xiao_ble/matter/zephyr/zephyr.uf2` onto the `XIAO-SENSE` drive (771 kB of
-  the 788 kB partition; the 32 kB storage area is split 28 kB settings + 4 kB factory-data node).
+- Size-trimmed build: no logging, no Matter/OpenThread shells, LTO; 636 kB of the XIAO's 788 kB
+  partition. A minimal Zephyr shell stays on USB CDC: `halo on|off|level N|temp MIREDS` drive the lamp
+  directly, `halo last` shows the last frame's result and timeslot counters, `halo crash` the crash
+  black box, `halo dfu` reboots into the board's USB bootloader. Pairing uses the Matter test setup
+  (passcode 20202021, discriminator 0xF00: manual code 34970112332; uncertified test vendor 0xFFF1,
+  which Apple Home accepts after a warning).
+- Boards: `xiao_ble` (UF2, 32 kB storage split 28 kB settings + 4 kB factory-data node) and
+  `nrf52840dongle/nrf52840` for a dongle carrying Nordic's open bootloader (`boards/*.overlay` has the
+  Makerdiary MDK USB Dongle's LED/button pins); updates through `halo dfu` then UF2 copy or
+  `nrfutil device program --traits nordicDfu`.
 
 ## Acknowledgements
 

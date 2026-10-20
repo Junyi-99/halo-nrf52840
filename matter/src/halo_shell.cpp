@@ -2,6 +2,7 @@
  * radio path (timeslots, ACK) from the USB console.
  */
 #include "app_task.h"
+#include "crash_box.h"
 #include "halo_radio_ts.h"
 
 #include <zephyr/shell/shell.h>
@@ -42,6 +43,38 @@ static int cmd_temp(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+static int cmd_last(const struct shell *sh, size_t, char **)
+{
+	const AppTask::LastFrame &l = AppTask::GetLastFrame();
+
+	if (!l.count) {
+		shell_print(sh, "no frame sent yet");
+		return 0;
+	}
+	const halo_ts_result_t &r = l.result;
+
+	shell_print(sh, "#%u %s %02X%02X: %s after %u attempt(s), rssi %d dBm%s", l.count, l.what, l.flags,
+		    l.value, r.ack ? "ACK" : "no ACK", r.attempts, r.rssi_dbm,
+		    r.energy && !r.ack ? " (reply heard)" : "");
+	shell_print(sh, "started %u tx %u rxto %u blocked %u nosig %u err %d txend %u us radiosig %u",
+		    r.started, r.tx_done, r.rx_timeout, r.blocked, r.no_signal, r.request_err, r.tx_end_us,
+		    r.radio_signals);
+	return 0;
+}
+
+static int cmd_crash(const struct shell *sh, size_t, char **)
+{
+	if (crash_box.magic != CRASH_BOX_MAGIC) {
+		shell_print(sh, "no crash recorded since the last clear");
+		return 0;
+	}
+	crash_box.mpsl_file[sizeof(crash_box.mpsl_file) - 1] = 0;
+	shell_print(sh, "fatal error: reason %u pc 0x%08x lr 0x%08x thread 0x%08x MPSL assert %s:%u",
+		    crash_box.reason, crash_box.pc, crash_box.lr, crash_box.thread, crash_box.mpsl_file,
+		    crash_box.mpsl_line);
+	return 0;
+}
+
 static int cmd_dfu(const struct shell *sh, size_t, char **)
 {
 	shell_print(sh, "rebooting into the UF2 bootloader");
@@ -51,6 +84,8 @@ static int cmd_dfu(const struct shell *sh, size_t, char **)
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(halo_cmds, SHELL_CMD(on, NULL, "Lamp on", cmd_on),
+			       SHELL_CMD(last, NULL, "Result of the last frame sent", cmd_last),
+			       SHELL_CMD(crash, NULL, "Crash black box from the previous boot", cmd_crash),
 			       SHELL_CMD(dfu, NULL, "Reboot into the UF2 bootloader", cmd_dfu),
 			       SHELL_CMD(off, NULL, "Lamp off", cmd_off),
 			       SHELL_CMD(level, NULL, "Brightness 1..254", cmd_level),

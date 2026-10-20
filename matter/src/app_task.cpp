@@ -6,12 +6,11 @@
 #include "clusters/identify.h"
 #include "halo_radio_ts.h"
 
-#include <app-common/zap-generated/attributes/Accessors.h>
+#include <app-common/zap-generated/ids/Attributes.h>
+#include <app-common/zap-generated/ids/Clusters.h>
 #include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/persistence/DefaultAttributePersistenceProvider.h>
 #include <app/persistence/DeferredAttributePersistenceProvider.h>
-#include <app/server/Server.h>
-#include <setup_payload/OnboardingCodesUtil.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -103,12 +102,19 @@ void RequestSync(bool power, bool temp)
 	k_sem_give(&sSyncSem);
 }
 
+AppTask::LastFrame sLast;
+
 void SendFrame(const char *what, uint8_t flags, uint8_t value)
 {
 	halo_ts_result_t r = halo_ts_send(CONFIG_HALO_LAMP_ADDRESS, flags, value, sPid, CONFIG_HALO_TX_GAIN,
 					  CONFIG_HALO_ATTEMPTS);
 
 	sPid = (sPid + 1) % 4;
+	sLast.what = what;
+	sLast.flags = flags;
+	sLast.value = value;
+	sLast.result = r;
+	sLast.count++;
 	LOG_INF("Halo %s %02X%02X: %s after %u attempt(s), rssi %d dBm%s [started %u tx %u rxto %u blocked %u nosig %u err %d txend %u us radiosig %u]",
 		what, flags, value, r.ack ? "ACK" : "no ACK", r.attempts, r.rssi_dbm,
 		r.energy && !r.ack ? " (reply heard)" : "", r.started, r.tx_done, r.rx_timeout, r.blocked,
@@ -146,6 +152,11 @@ void HaloThread(void *, void *, void *)
 	}
 }
 } /* namespace */
+
+const AppTask::LastFrame &AppTask::GetLastFrame()
+{
+	return sLast;
+}
 
 void AppTask::SeedState(bool on, uint8_t level, uint16_t mireds)
 {
@@ -193,10 +204,6 @@ void AppTask::SetMireds(uint16_t mireds)
 	RequestSync(false, true);
 }
 
-void AppTask::ButtonEventHandler(Nrf::ButtonState, Nrf::ButtonMask)
-{
-}
-
 CHIP_ERROR AppTask::Init()
 {
 	ReturnErrorOnFailure(Nrf::Matter::PrepareServer(Nrf::Matter::InitData{ .mPostServerInitClbk = []() {
@@ -205,7 +212,7 @@ CHIP_ERROR AppTask::Init()
 		return CHIP_NO_ERROR;
 	} }));
 
-	if (!Nrf::GetBoard().Init(ButtonEventHandler)) {
+	if (!Nrf::GetBoard().Init()) {
 		LOG_WRN("Board LEDs/buttons initialization failed (no buttons on this board is fine)");
 	}
 

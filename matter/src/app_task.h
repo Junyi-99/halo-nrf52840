@@ -3,7 +3,7 @@
  */
 #pragma once
 
-#include "board/board.h"
+#include "halo_radio_ts.h"
 
 #include <platform/CHIPDeviceLayer.h>
 
@@ -25,7 +25,16 @@ public:
 	/* Seed the cached state from persisted attributes at boot, without transmitting. */
 	void SeedState(bool on, uint8_t level, uint16_t mireds);
 
+	/* Result of the most recent frame, for the "halo last" shell command. */
+	struct LastFrame {
+		const char *what;
+		uint8_t flags;
+		uint8_t value;
+		halo_ts_result_t result;
+		unsigned count;
+	};
+	static const LastFrame &GetLastFrame();
+
 private:
 	CHIP_ERROR Init();
-	static void ButtonEventHandler(Nrf::ButtonState state, Nrf::ButtonMask hasChanged);
 };
