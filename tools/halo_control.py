@@ -129,8 +129,12 @@ def main():
     rgb = LED_COLORS[a.mode if a.brightness else 'off']
 
     with HaloClient(a.port) as client:
-        if led is not None and client.command('LED?') != 'LED 48 RGB WS2812':
-            raise RuntimeError('LED support missing')
+        if led is not None:
+            # ESP32-S3 answers 'LED 48 RGB WS2812', nRF52840 boards 'LED board led0 GPIO'
+            # (on/off only), boards without an LED 'LED none'.
+            info = client.command('LED?')
+            if not info.startswith('LED ') or info == 'LED none':
+                raise RuntimeError('LED support missing')
         if led == 'on':
             set_led(client, rgb)
         elif led == 'off':
