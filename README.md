@@ -166,25 +166,6 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
    advances it for you; manual tests must change `pid` between commands.
 3. `PHY BLE1M` (±250 kHz) exists for experiments; NRF1M is the one that is known to work.
 
-## Layout
-
-- `src/halo_frame.h`: frame bits and CRC16, identical output to halo-esp32s3's `halo_synth.h`
-  (checked bit for bit against it).
-- `src/radio.c`: RADIO setup, oversampled TX, oversampled ACK RX, RSSI diagnostics. TIMER1 is used
-  as a free-running microsecond clock.
-- `src/main.c`: serial parser and replies, compatible with the ESP32 firmware, plus `HALOTEMP`,
-  `DIAG`, `PHY`, `DFU`, PWM/GPIO LED.
-- `app.overlay`: CDC ACM console; `boards/*.overlay`: per-board PWM LED pins (each includes
-  `app.overlay`, since Zephyr uses only the board overlay when one exists).
-- `tools/halo_control.py`: host CLI, verbatim from halo-esp32s3.
-- `tools/make_dfu_zip.py`, `tools/dfu_update.sh`: Nordic USB DFU packaging and one-shot update.
-- `tools/uf2_update.sh`: one-shot update for UF2 boards.
-- `bootloader/`: the rebuilt PCA10059 open bootloader (+MBR) with its `sdk_config.h`, and the
-  official Adafruit UF2 bootloader for the XIAO nRF52840.
-
-Uses the legacy Zephyr USB device stack (deprecated in 4.4, still functional) because it needs one
-call to bring up a CDC ACM console; the warnings in the build come from there.
-
 ## Matter over Thread (`matter/`)
 
 The XIAO can also be a Matter **Color Temperature Light** on Thread, so the ScreenBar shows up in
