@@ -1,0 +1,10 @@
+#include "../app.overlay"
+
+/* The dongle's LD2 RGB LED is already on PWM0 channels 0..2. */
+/ {
+	aliases {
+		halo-red = &red_pwm_led;
+		halo-green = &green_pwm_led;
+		halo-blue = &blue_pwm_led;
+	};
+};

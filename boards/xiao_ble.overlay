@@ -1,0 +1,42 @@
+#include "../app.overlay"
+
+/* Drive the XIAO's RGB LED (red P0.26, green P0.30, blue P0.06, active low)
+ * from PWM0 so "LED R G B" has real brightness. The board's default PWM0 pin
+ * (P0.17) is replaced.
+ */
+&pwm0_default {
+	group1 {
+		psels = <NRF_PSEL(PWM_OUT0, 0, 26)>, <NRF_PSEL(PWM_OUT1, 0, 30)>,
+			<NRF_PSEL(PWM_OUT2, 0, 6)>;
+		nordic,invert;
+	};
+};
+
+&pwm0_sleep {
+	group1 {
+		psels = <NRF_PSEL(PWM_OUT0, 0, 26)>, <NRF_PSEL(PWM_OUT1, 0, 30)>,
+			<NRF_PSEL(PWM_OUT2, 0, 6)>;
+		low-power-enable;
+	};
+};
+
+/ {
+	halo_pwmleds {
+		compatible = "pwm-leds";
+		halo_red: halo_red {
+			pwms = <&pwm0 0 PWM_USEC(1000) PWM_POLARITY_INVERTED>;
+		};
+		halo_green: halo_green {
+			pwms = <&pwm0 1 PWM_USEC(1000) PWM_POLARITY_INVERTED>;
+		};
+		halo_blue: halo_blue {
+			pwms = <&pwm0 2 PWM_USEC(1000) PWM_POLARITY_INVERTED>;
+		};
+	};
+
+	aliases {
+		halo-red = &halo_red;
+		halo-green = &halo_green;
+		halo-blue = &halo_blue;
+	};
+};

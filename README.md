@@ -140,8 +140,9 @@ python tools/halo_control.py --mode front --brightness 100 --led on          # L
 python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # same with a custom colour
 ```
 
-`LED R G B` drives the three dies of the XIAO's RGB LED / the dongle's LD2 (non-zero = on,
-GPIO only); single-LED boards light on any non-zero value.
+`LED R G B` drives the three dies of the XIAO's RGB LED / the dongle's LD2 with PWM (1 kHz,
+gamma 2, so 1 is just visible and 255 is full); the Pro Micro's single LED follows the brightest
+channel. The PWM pin maps live in `boards/*.overlay`; boards without one fall back to GPIO on/off.
 
 Serial, newline terminated, type `HELP` for the full list:
 
@@ -183,8 +184,10 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
   (checked bit for bit against it).
 - `src/radio.c`: RADIO setup, oversampled TX, oversampled ACK RX, RSSI diagnostics. TIMER1 is used
   as a free-running microsecond clock.
-- `src/main.c`: serial parser and replies, compatible with the ESP32 firmware, plus `DIAG`, `PHY`,
-  `DFU`.
+- `src/main.c`: serial parser and replies, compatible with the ESP32 firmware, plus `HALOTEMP`,
+  `DIAG`, `PHY`, `DFU`, PWM/GPIO LED.
+- `app.overlay`: CDC ACM console; `boards/*.overlay`: per-board PWM LED pins (each includes
+  `app.overlay`, since Zephyr uses only the board overlay when one exists).
 - `tools/halo_control.py`: host CLI, verbatim from halo-esp32s3.
 - `tools/make_dfu_zip.py`, `tools/dfu_update.sh`: Nordic USB DFU packaging and one-shot update.
 - `tools/uf2_update.sh`: one-shot update for UF2 boards.

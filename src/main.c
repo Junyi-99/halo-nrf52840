@@ -11,6 +11,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pwm.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/usb/usb_device.h>
@@ -40,12 +41,26 @@
 #define LEVEL_MIN 0x4c
 #define LEVEL_MAX 0xfe
 
-/* Board LED mapping for "LED R G B". Each channel is a GPIO: non-zero = on.
+/* Board LED mapping for "LED R G B".
+ * PWM boards (halo-red/-green/-blue aliases from boards/*.overlay) get real
+ * brightness with a gamma curve; a single halo-red channel follows max(R, G, B).
+ * Otherwise each channel is a GPIO: non-zero = on.
  *   XIAO nRF52840: led0/led1/led2 are the red/green/blue dies of its RGB LED.
  *   nRF52840 dongle: led1/led2/led3 are the RGB LD2 (led0 is the green LD1).
  *   Single-LED boards (Pro Micro, DK...): led0 lights when any channel is non-zero.
  */
 #define LED_OK(alias) DT_NODE_HAS_STATUS(DT_ALIAS(alias), okay)
+#if DT_HAS_ALIAS(halo_red)
+static const struct pwm_dt_spec pwm_leds[] = {
+	PWM_DT_SPEC_GET(DT_ALIAS(halo_red)),
+#if DT_HAS_ALIAS(halo_green) && DT_HAS_ALIAS(halo_blue)
+	PWM_DT_SPEC_GET(DT_ALIAS(halo_green)), PWM_DT_SPEC_GET(DT_ALIAS(halo_blue)),
+#endif
+};
+#define HAVE_PWM_LED 1
+#else
+#define HAVE_PWM_LED 0
+#endif
 #if defined(CONFIG_BOARD_NRF52840DONGLE) && LED_OK(led1) && LED_OK(led2) && LED_OK(led3)
 static const struct gpio_dt_spec leds[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios), GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios),
@@ -66,6 +81,17 @@ static const struct gpio_dt_spec leds[] = {};
 #define LED_TYPE "LED none"
 #endif
 #define HAVE_LED (ARRAY_SIZE(leds) > 0)
+
+#if HAVE_PWM_LED
+/* Perceptual brightness: pulse = period * (v / 255)^2. 1/255 is just visible. */
+static void pwm_led_set(unsigned channel, unsigned value)
+{
+	const struct pwm_dt_spec *led = &pwm_leds[channel];
+	uint32_t pulse = (uint32_t)((uint64_t)led->period * value * value / (255u * 255u));
+
+	pwm_set_pulse_dt(led, pulse);
+}
+#endif
 
 static const struct device *console = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
@@ -90,7 +116,7 @@ static const char HELP_TEXT[] =
 	"DIAG                 Details of the last attempt (RSSI, raw ACK bytes).\n"
 	"PHY NRF1M|BLE1M      Modulator: Nrf_1Mbit (+-170 kHz, default) or Ble_1Mbit (+-250 kHz).\n"
 	"DFU                  Reboot into the USB bootloader (UF2 drive or Nordic DFU).\n"
-	"LED R G B            Board LED: RGB boards drive each colour (non-zero = on), others on/off.\n"
+	"LED R G B            Board LED, 0..255 per colour (PWM with gamma on XIAO/dongle/Pro Micro).\n"
 	"LED?                 Query LED type.\n"
 	"SYNC nonce           Echo synchronization marker.\n"
 	"RELEASE              Acknowledge host cleanup.\n"
@@ -123,6 +149,17 @@ static void handle_led(const char *line)
 		reply("ERR led_args\n");
 		return;
 	}
+#if HAVE_PWM_LED
+	if (ARRAY_SIZE(pwm_leds) == 3) {
+		pwm_led_set(0, r);
+		pwm_led_set(1, g);
+		pwm_led_set(2, b);
+	} else {
+		pwm_led_set(0, r > g ? (r > b ? r : b) : (g > b ? g : b));
+	}
+	replyf("OK LED %u %u %u\n", r, g, b);
+	return;
+#endif
 	if (!HAVE_LED) {
 		reply("ERR led_init\n");
 		return;
@@ -212,7 +249,11 @@ static void handle(const char *line)
 	} else if (!strcmp(line, "RELEASE")) {
 		reply("OK\n");
 	} else if (!strcmp(line, "LED?")) {
+#if HAVE_PWM_LED
+		reply(ARRAY_SIZE(pwm_leds) == 3 ? "LED board rgb PWM\n" : "LED board led0 PWM\n");
+#else
 		reply(LED_TYPE "\n");
+#endif
 	} else if (!strncmp(line, "LED ", 4)) {
 		handle_led(line);
 	} else if (!strcmp(line, "HALO?")) {
@@ -247,11 +288,19 @@ static void handle(const char *line)
 
 int main(void)
 {
+#if HAVE_PWM_LED
+	for (unsigned i = 0; i < ARRAY_SIZE(pwm_leds); i++) {
+		if (pwm_is_ready_dt(&pwm_leds[i])) {
+			pwm_set_pulse_dt(&pwm_leds[i], 0);
+		}
+	}
+#else
 	for (unsigned i = 0; i < ARRAY_SIZE(leds); i++) {
 		if (gpio_is_ready_dt(&leds[i])) {
 			gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_INACTIVE);
 		}
 	}
+#endif
 	if (usb_enable(NULL) != 0) {
 		return 0;
 	}

@@ -1,0 +1,8 @@
+#include "../app.overlay"
+
+/* Single LED on PWM0 channel 0: brightness follows the brightest of R, G, B. */
+/ {
+	aliases {
+		halo-red = &red_pwm_led;
+	};
+};
