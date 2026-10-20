@@ -135,7 +135,12 @@ Same protocol as halo-esp32s3, so its tool works unchanged (a copy is in `tools/
 ```sh
 pip install pyserial
 python tools/halo_control.py --address 16224CB1 --mode back --brightness 50
+python tools/halo_control.py --mode front --brightness 100 --led on          # LED in the mode colour, green 1 s on ACK
+python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # same with a custom colour
 ```
+
+`LED R G B` drives the three dies of the XIAO's RGB LED / the dongle's LD2 (non-zero = on,
+GPIO only); single-LED boards light on any non-zero value.
 
 Serial, newline terminated, type `HELP` for the full list:
 

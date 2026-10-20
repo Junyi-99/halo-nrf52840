@@ -39,12 +39,32 @@
 #define LEVEL_MIN 0x4c
 #define LEVEL_MAX 0xfe
 
-#if DT_NODE_HAS_STATUS(DT_ALIAS(led0), okay)
-static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-#define HAVE_LED 1
+/* Board LED mapping for "LED R G B". Each channel is a GPIO: non-zero = on.
+ *   XIAO nRF52840: led0/led1/led2 are the red/green/blue dies of its RGB LED.
+ *   nRF52840 dongle: led1/led2/led3 are the RGB LD2 (led0 is the green LD1).
+ *   Single-LED boards (Pro Micro, DK...): led0 lights when any channel is non-zero.
+ */
+#define LED_OK(alias) DT_NODE_HAS_STATUS(DT_ALIAS(alias), okay)
+#if defined(CONFIG_BOARD_NRF52840DONGLE) && LED_OK(led1) && LED_OK(led2) && LED_OK(led3)
+static const struct gpio_dt_spec leds[] = {
+	GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios), GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios),
+	GPIO_DT_SPEC_GET(DT_ALIAS(led3), gpios),
+};
+#define LED_TYPE "LED board rgb GPIO"
+#elif LED_OK(led0) && LED_OK(led1) && LED_OK(led2)
+static const struct gpio_dt_spec leds[] = {
+	GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios), GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios),
+	GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios),
+};
+#define LED_TYPE "LED board rgb GPIO"
+#elif LED_OK(led0)
+static const struct gpio_dt_spec leds[] = {GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios)};
+#define LED_TYPE "LED board led0 GPIO"
 #else
-#define HAVE_LED 0
+static const struct gpio_dt_spec leds[] = {};
+#define LED_TYPE "LED none"
 #endif
+#define HAVE_LED (ARRAY_SIZE(leds) > 0)
 
 static const struct device *console = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
@@ -67,7 +87,7 @@ static const char HELP_TEXT[] =
 	"DIAG                 Details of the last attempt (RSSI, raw ACK bytes).\n"
 	"PHY NRF1M|BLE1M      Modulator: Nrf_1Mbit (+-170 kHz, default) or Ble_1Mbit (+-250 kHz).\n"
 	"DFU                  Reboot into the USB bootloader (UF2 drive or Nordic DFU).\n"
-	"LED R G B            Board LED on if any value is non-zero.\n"
+	"LED R G B            Board LED: RGB boards drive each colour (non-zero = on), others on/off.\n"
 	"LED?                 Query LED type.\n"
 	"SYNC nonce           Echo synchronization marker.\n"
 	"RELEASE              Acknowledge host cleanup.\n"
@@ -100,12 +120,18 @@ static void handle_led(const char *line)
 		reply("ERR led_args\n");
 		return;
 	}
-#if HAVE_LED
-	gpio_pin_set_dt(&led0, (r | g | b) != 0);
+	if (!HAVE_LED) {
+		reply("ERR led_init\n");
+		return;
+	}
+	if (ARRAY_SIZE(leds) == 3) {
+		gpio_pin_set_dt(&leds[0], r != 0);
+		gpio_pin_set_dt(&leds[1], g != 0);
+		gpio_pin_set_dt(&leds[2], b != 0);
+	} else {
+		gpio_pin_set_dt(&leds[0], (r | g | b) != 0);
+	}
 	replyf("OK LED %u %u %u\n", r, g, b);
-#else
-	reply("ERR led_init\n");
-#endif
 }
 
 static void handle_halo(const char *args)
@@ -172,7 +198,7 @@ static void handle(const char *line)
 	} else if (!strcmp(line, "RELEASE")) {
 		reply("OK\n");
 	} else if (!strcmp(line, "LED?")) {
-		reply(HAVE_LED ? "LED board led0 GPIO\n" : "LED none\n");
+		reply(LED_TYPE "\n");
 	} else if (!strncmp(line, "LED ", 4)) {
 		handle_led(line);
 	} else if (!strcmp(line, "HALO?")) {
@@ -205,11 +231,11 @@ static void handle(const char *line)
 
 int main(void)
 {
-#if HAVE_LED
-	if (gpio_is_ready_dt(&led0)) {
-		gpio_pin_configure_dt(&led0, GPIO_OUTPUT_INACTIVE);
+	for (unsigned i = 0; i < ARRAY_SIZE(leds); i++) {
+		if (gpio_is_ready_dt(&leds[i])) {
+			gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_INACTIVE);
+		}
 	}
-#endif
 	if (usb_enable(NULL) != 0) {
 		return 0;
 	}

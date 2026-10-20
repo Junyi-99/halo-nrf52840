@@ -80,8 +80,11 @@ def parse_args():
     ap.add_argument('--pid', metavar='0-3', type=int, choices=range(4), default=argparse.SUPPRESS,
                     help='override next PID; default is the value saved by the previous run')
     ap.add_argument('--led', choices=('on', 'off'), default=argparse.SUPPRESS,
-                    help='onboard RGB LED: on = turn on, blink when the lamp ACKs; off = LED 0 0 0; '
-                         'omit to leave it untouched')
+                    help='onboard RGB LED: on = turn on and show green for 1 s when the lamp ACKs; '
+                         'off = LED 0 0 0; omit to leave it untouched')
+    ap.add_argument('--rgb', metavar='R,G,B', default=argparse.SUPPRESS,
+                    help='LED colour to use with --led on instead of the per-mode default, '
+                         'each 0..255 (GPIO-only boards treat non-zero as on)')
     ap.add_argument('--port', metavar='DEV', default=DEFAULT_PORT,
                     help='ESP serial port')
     a = ap.parse_args()
@@ -92,6 +95,15 @@ def parse_args():
         ap.error('address must be hex')
     if not 0 <= a.address <= 0xffffffff:
         ap.error('address must fit 4 bytes')
+    if hasattr(a, 'rgb'):
+        try:
+            a.rgb = tuple(int(x) for x in a.rgb.split(','))
+        except ValueError:
+            ap.error('rgb must be R,G,B')
+        if len(a.rgb) != 3 or not all(0 <= x <= 255 for x in a.rgb):
+            ap.error('rgb must be three values 0..255')
+        if getattr(a, 'led', None) is None:
+            a.led = 'on'
 
     return a
 
@@ -116,9 +128,14 @@ def set_led(client, rgb):
         raise RuntimeError('LED command failed')
 
 
-def blink_led(client, rgb):
-    set_led(client, LED_OFF)
-    time.sleep(0.2)
+ACK_COLOR = (0, 255, 0)
+ACK_FLASH_S = 1.0
+
+
+def ack_flash(client, rgb):
+    """Show green for a second after a verified ACK, then go back to the chosen colour."""
+    set_led(client, ACK_COLOR)
+    time.sleep(ACK_FLASH_S)
     set_led(client, rgb)
 
 
@@ -126,7 +143,7 @@ def main():
     a = parse_args()
     pid = load_pid(getattr(a, 'pid', None))
     led = getattr(a, 'led', None)
-    rgb = LED_COLORS[a.mode if a.brightness else 'off']
+    rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode if a.brightness else 'off']
 
     with HaloClient(a.port) as client:
         if led is not None:
@@ -152,7 +169,7 @@ def main():
             raise SystemExit('No verified ACK; lamp state is unknown.')
 
         if led == 'on':
-            blink_led(client, rgb)
+            ack_flash(client, rgb)
 
 
 if __name__ == '__main__':
