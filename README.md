@@ -114,27 +114,6 @@ Outputs land in `build/<board>/zephyr/` as `zephyr.uf2` / `zephyr.hex`.
 
 ## Flash
 
-### The dongle used here (no reset button, was running OpenSK)
-
-Done once over J-Link (SWDIO, SWCLK, GND, VTref): full erase, then
-`bootloader/open_bootloader_gpregret_mbr_pca10059.hex`, which is Nordic's PCA10059 open USB
-bootloader from nRF5 SDK 17.1.0 rebuilt with `NRF_BL_DFU_ENTER_METHOD_GPREGRET 1` (the prebuilt one
-only enters DFU from the reset pin) plus the MBR, UICR bootloader address 0xE0000:
-
-```sh
-nrfutil device program --firmware bootloader/open_bootloader_gpregret_mbr_pca10059.hex --traits jlink --options chip_erase_mode=ERASE_ALL
-nrfutil device reset --traits jlink
-```
-
-From then on everything is over USB. The firmware's `DFU` command writes GPREGRET = 0xB1 and
-reboots into the bootloader (`Open DFU Bootloader`, 1915:521f); `tools/dfu_update.sh` does the
-whole update: `DFU` on the serial port, wait for the bootloader, `nrfutil device program --firmware
-build/halo_dongle.zip --traits nordicDfu`, wait for the app to come back. The zip comes from
-`tools/make_dfu_zip.py` (Nordic's `nrf5sdk-tools` is not available for aarch64 Linux; the script
-writes the same unsigned init packet `pkg generate --hw-version 52 --sd-req 0x00` would).
-`nrfutil` here is Nordic's binary in `~/.local/bin` with the `device` command installed;
-`/etc/udev/rules.d/99-halo-nrf52840.rules` makes both USB identities world-accessible.
-
 ### XIAO nRF52840 (Adafruit UF2 bootloader)
 
 Nothing to prepare: double-tap RST, copy `build/xiao_ble/zephyr/zephyr.uf2` onto the `XIAO-SENSE`
@@ -153,7 +132,11 @@ just drops back into the bootloader; re-copy the right UF2.
 ### Other boards
 
 - **Feather (UF2):** same as the XIAO.
-- **Stock dongle with reset button:** reset into DFU, then the `nordicDfu` program step above.
+- **nRF52840 dongle:** reset into its Nordic DFU bootloader, then
+  `nrfutil device program --firmware build/halo_dongle.zip --traits nordicDfu` (the zip comes from
+  `tools/make_dfu_zip.py`; `tools/dfu_update.sh` does the whole cycle using the firmware's `DFU`
+  command). `bootloader/` holds a rebuilt PCA10059 open bootloader that also enters DFU via GPREGRET,
+  for dongles without a reset button.
 - **DK:** `west flash -d build/nrf52840dk_nrf52840` with J-Link, or `-r pyocd`.
 - **Any board over SWD, no bootloader:** `nrf52840dongle/nrf52840/bare` (code at 0x0).
 
