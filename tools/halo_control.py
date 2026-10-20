@@ -40,7 +40,7 @@ class HaloClient:
             raise
 
     def _sync(self):
-        """Release any previous owner and wait until the ESP echoes a fresh marker."""
+        """Release any previous owner and wait until the board echoes a fresh marker."""
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             marker = ('SYNC ' + str(time.monotonic_ns())).encode()
@@ -152,12 +152,12 @@ def main():
     a = parse_args()
     pid = load_pid(getattr(a, 'pid', None))
     led = getattr(a, 'led', None)
-    rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode if a.mode != 'off' else 'off']
+    rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode]
 
     with HaloClient(a.port) as client:
         if led is not None:
-            # ESP32-S3 answers 'LED 48 RGB WS2812', nRF52840 boards 'LED board led0 GPIO'
-            # (on/off only), boards without an LED 'LED none'.
+            # Firmware answers 'LED board rgb PWM', 'LED board led0 PWM', 'LED board rgb GPIO'
+            # or 'LED board led0 GPIO'; boards without an LED answer 'LED none'.
             info = client.command('LED?')
             if not info.startswith('LED ') or info == 'LED none':
                 raise RuntimeError('LED support missing')

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: ./build.sh <board> [extra west args]
-# Boards: xiao_ble  promicro_nrf52840/nrf52840/uf2  nrf52840dongle/nrf52840  nrf52840dk/nrf52840  adafruit_feather_nrf52840  arduino_nano_33_ble
+# Boards: xiao_ble  promicro_nrf52840/nrf52840/uf2  nrf52840dongle/nrf52840  nrf52840dongle/nrf52840/bare  nrf52840dk/nrf52840  adafruit_feather_nrf52840
 set -e
 BOARD=${1:?board}
 shift

@@ -44,7 +44,6 @@ typedef struct {
 void halo_radio_init(void);
 void halo_radio_set_phy(halo_phy_t phy);
 halo_phy_t halo_radio_get_phy(void);
-int halo_radio_gain_dbm(unsigned gain);
 
 /* Send one command with up to max_attempts tries, 100 ms apart, stopping at the
  * first verified ACK. Returns the result and fills *crc with the command CRC16.

@@ -15,13 +15,12 @@
  * The hardware address is sent base first (register LSByte first), prefix last;
  * this is the same mapping Bluetooth LE uses (BASE0 = AA << 8, PREFIX0 = AA >> 24).
  *
- * ACK: after END the radio flips to RX and looks for 5 oversampled symbols
- * (last preamble bit + the first 4 address bits) as the hardware address, then
- * captures the rest of the ACK as 0x00/0xFF bytes which are majority-voted and
- * compared bit for bit with the expected 57-bit ACK. Both base/prefix orders are
- * enabled as logical addresses 0 and 1 in case the order assumption is wrong.
- * RSSI is sampled throughout the listen window so an unmatched reply still
- * shows up as energy in DIAG.
+ * ACK: after END the radio flips to RX with a 3-symbol hardware address (see
+ * rx_pattern below) that fires on the lamp's ramp-up carrier, preamble or ACK
+ * body, then captures HALO_RX_BYTES of 0x00/0xFF bytes. decode_ack() votes them
+ * into symbols at all 8 phases and aligns them against the expected preamble +
+ * 57-bit ACK. RSSI is sampled until the address matches so an unmatched reply
+ * still shows up as energy in DIAG.
  */
 #include <string.h>
 
@@ -36,9 +35,7 @@
 
 #define HALO_FREQUENCY      5u		/* 2400 + 5 = 2405 MHz */
 #define SYMBOL_US           8u		/* one 125 kbit/s bit = 8 us = 8 bits at 1 Mbit/s */
-#define TX_LEAD_SYMBOLS     5u		/* hardware address FF 00 FF 00 FF */
 #define RX_HW_SYMBOLS       3u		/* hardware address: 3 oversampled symbols */
-#define RX_LEAD_SYMBOLS     1u		/* symbols before the ACK body we may use: preamble bit 7 */
 #define RSSI_TRACE_STEP_US  16u
 #define RX_WINDOW_US        1600u	/* lamp answers ~184 us after our packet, ACK lasts ~520 us */
 #define TX_TIMEOUT_US       3000u
@@ -107,7 +104,7 @@ halo_phy_t halo_radio_get_phy(void)
 	return current_phy;
 }
 
-int halo_radio_gain_dbm(unsigned gain)
+static int halo_radio_gain_dbm(unsigned gain)
 {
 	return gain_dbm[gain > 10 ? 10 : gain];
 }
@@ -298,13 +295,11 @@ static void receive_ack(uint32_t t_end, uint32_t address, unsigned pid, unsigned
 {
 	uint8_t expected[HALO_ACK_BITS];
 	uint16_t ack_crc = halo_ack_pattern(address, pid, expected);
-	/* Long enough to hold the whole ACK from wherever the correlator fires. */
-	unsigned nbytes = HALO_RX_BYTES;
 
-	diag.rx_bytes = nbytes;
+	diag.rx_bytes = HALO_RX_BYTES;
 
 	radio_reset_common(gain);
-	NRF_RADIO->PCNF1 = pcnf1(nbytes, 2);
+	NRF_RADIO->PCNF1 = pcnf1(HALO_RX_BYTES, 2);
 	/* BALEN = 2: the base is the two most significant register bytes, sent
 	 * LSByte first, then the prefix (same mapping Bluetooth LE uses).
 	 */
@@ -397,7 +392,7 @@ static void receive_ack(uint32_t t_end, uint32_t address, unsigned pid, unsigned
 		return;
 	}
 
-	if (decode_ack(expected, nbytes)) {
+	if (decode_ack(expected, HALO_RX_BYTES)) {
 		result->ack = true;
 		result->ack_crc = ack_crc;
 		/* ADDRESS fires where the capture starts; the ACK body (expected
