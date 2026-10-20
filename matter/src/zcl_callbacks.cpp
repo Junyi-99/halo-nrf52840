@@ -16,17 +16,18 @@ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath &a
 {
 	ClusterId clusterId = attributePath.mClusterId;
 	AttributeId attributeId = attributePath.mAttributeId;
+	EndpointId endpoint = attributePath.mEndpointId;
 
 	if (clusterId == OnOff::Id && attributeId == OnOff::Attributes::OnOff::Id) {
-		AppTask::Instance().SetOnOff(*value != 0);
+		AppTask::Instance().SetOnOff(endpoint, *value != 0);
 	} else if (clusterId == LevelControl::Id && attributeId == LevelControl::Attributes::CurrentLevel::Id) {
-		AppTask::Instance().SetLevel(*value);
+		AppTask::Instance().SetLevel(endpoint, *value);
 	} else if (clusterId == ColorControl::Id &&
 		   attributeId == ColorControl::Attributes::ColorTemperatureMireds::Id) {
 		uint16_t mireds;
 
 		memcpy(&mireds, value, sizeof(mireds));
-		AppTask::Instance().SetMireds(mireds);
+		AppTask::Instance().SetMireds(endpoint, mireds);
 	}
 }
 
@@ -44,5 +45,5 @@ void emberAfOnOffClusterInitCallback(EndpointId endpoint)
 		level = currentLevel.ValueOr(254);
 	}
 	ColorControl::Attributes::ColorTemperatureMireds::Get(endpoint, &mireds);
-	AppTask::Instance().SeedState(on, level, mireds);
+	AppTask::Instance().SeedState(endpoint, on, level, mireds);
 }

@@ -8,18 +8,41 @@
 #include <zephyr/shell/shell.h>
 
 #include <stdlib.h>
+#include <string.h>
+
+static int set_lamp(const struct shell *sh, chip::EndpointId endpoint, size_t argc, char **argv)
+{
+	if (argc != 2 || (strcmp(argv[1], "on") && strcmp(argv[1], "off"))) {
+		shell_print(sh, "usage: halo %s on|off", endpoint == AppTask::kBackEndpointId ? "back" : "front");
+		return -EINVAL;
+	}
+	AppTask::Instance().SetOnOff(endpoint, !strcmp(argv[1], "on"));
+	return 0;
+}
+
+static int cmd_front(const struct shell *sh, size_t argc, char **argv)
+{
+	return set_lamp(sh, AppTask::kFrontEndpointId, argc, argv);
+}
+
+static int cmd_back(const struct shell *sh, size_t argc, char **argv)
+{
+	return set_lamp(sh, AppTask::kBackEndpointId, argc, argv);
+}
 
 static int cmd_on(const struct shell *sh, size_t, char **)
 {
-	AppTask::Instance().SetOnOff(true);
-	shell_print(sh, "on requested");
+	AppTask::Instance().SetOnOff(AppTask::kFrontEndpointId, true);
+	AppTask::Instance().SetOnOff(AppTask::kBackEndpointId, true);
+	shell_print(sh, "both lamps on requested");
 	return 0;
 }
 
 static int cmd_off(const struct shell *sh, size_t, char **)
 {
-	AppTask::Instance().SetOnOff(false);
-	shell_print(sh, "off requested");
+	AppTask::Instance().SetOnOff(AppTask::kFrontEndpointId, false);
+	AppTask::Instance().SetOnOff(AppTask::kBackEndpointId, false);
+	shell_print(sh, "both lamps off requested");
 	return 0;
 }
 
@@ -29,7 +52,7 @@ static int cmd_level(const struct shell *sh, size_t argc, char **argv)
 		shell_print(sh, "usage: halo level <1..254>");
 		return -EINVAL;
 	}
-	AppTask::Instance().SetLevel(static_cast<uint8_t>(atoi(argv[1])));
+	AppTask::Instance().SetLevel(AppTask::kFrontEndpointId, static_cast<uint8_t>(atoi(argv[1])));
 	return 0;
 }
 
@@ -39,7 +62,7 @@ static int cmd_temp(const struct shell *sh, size_t argc, char **argv)
 		shell_print(sh, "usage: halo temp <mireds 154..370>");
 		return -EINVAL;
 	}
-	AppTask::Instance().SetMireds(static_cast<uint16_t>(atoi(argv[1])));
+	AppTask::Instance().SetMireds(AppTask::kFrontEndpointId, static_cast<uint16_t>(atoi(argv[1])));
 	return 0;
 }
 
@@ -72,6 +95,10 @@ static int cmd_crash(const struct shell *sh, size_t, char **)
 	shell_print(sh, "fatal error: reason %u pc 0x%08x lr 0x%08x thread 0x%08x MPSL assert %s:%u",
 		    crash_box.reason, crash_box.pc, crash_box.lr, crash_box.thread, crash_box.mpsl_file,
 		    crash_box.mpsl_line);
+	shell_print(sh, "trace entries %u", crash_box.trace_count);
+	for (unsigned i = 0; i < crash_box.trace_count && i < 24; i++) {
+		shell_print(sh, "trace 0x%08x", crash_box.trace[i]);
+	}
 	return 0;
 }
 
@@ -83,11 +110,13 @@ static int cmd_dfu(const struct shell *sh, size_t, char **)
 	return 0;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(halo_cmds, SHELL_CMD(on, NULL, "Lamp on", cmd_on),
+SHELL_STATIC_SUBCMD_SET_CREATE(halo_cmds, SHELL_CMD(on, NULL, "Both lamps on", cmd_on),
+			       SHELL_CMD(front, NULL, "Front lamp on|off", cmd_front),
+			       SHELL_CMD(back, NULL, "Back lamp on|off", cmd_back),
 			       SHELL_CMD(last, NULL, "Result of the last frame sent", cmd_last),
 			       SHELL_CMD(crash, NULL, "Crash black box from the previous boot", cmd_crash),
 			       SHELL_CMD(dfu, NULL, "Reboot into the UF2 bootloader", cmd_dfu),
-			       SHELL_CMD(off, NULL, "Lamp off", cmd_off),
+			       SHELL_CMD(off, NULL, "Both lamps off", cmd_off),
 			       SHELL_CMD(level, NULL, "Brightness 1..254", cmd_level),
 			       SHELL_CMD(temp, NULL, "Colour temperature in mireds", cmd_temp),
 			       SHELL_SUBCMD_SET_END);

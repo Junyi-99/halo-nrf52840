@@ -8,7 +8,7 @@ Two firmwares, one radio trick:
 
 | | `matter/` — Apple Home firmware | root — USB firmware |
 |---|---|---|
-| What it is | Matter over Thread **Color Temperature Light**: on/off, brightness, colour temperature from the Home app, Siri, automations | USB CDC serial controller, same line protocol as halo-esp32s3, `halo_control.py` on the host |
+| What it is | Matter over Thread: the ScreenBar's **front lamp and back lamp as two Color Temperature Lights**, each switchable on its own; brightness and colour temperature are shared by the lamp and stay in sync between the two | USB CDC serial controller, same line protocol as halo-esp32s3, `halo_control.py` on the host |
 | Needs | XIAO nRF52840 + a Thread border router (HomePod mini, Apple TV 4K, …) | any nRF52840 board on USB |
 | SDK | nRF Connect SDK v3.4.1 | Zephyr v4.4.2 |
 | Pairing | fixed test code **3497-011-2332**, QR below | n/a |
@@ -174,13 +174,20 @@ command. Commissioned into Apple Home through a HomePod mini on 2026-10-21; on/o
 colour temperature from the Home app all reached the lamp with verified ACKs.
 
 - `matter/src/default_zap/`: data model (light bulb sample + Color Control, temperature feature,
-  154..370 mireds), regenerated with ZAP.
-- `matter/src/app_task.cpp`: Matter attribute changes → lamp state → sync thread → frames.
+  154..370 mireds), regenerated with ZAP. Endpoint 1 is the front lamp, endpoint 2 the back lamp;
+  each has its own ZAP endpoint type on purpose: with one shared type ZAP sizes the per-cluster
+  state tables by type, the second endpoint then has no Level Control state and the stack aborts
+  during initialisation.
+- `matter/src/app_task.cpp`: Matter attribute changes → lamp state (two on/off flags, shared
+  brightness and colour temperature mirrored to the other endpoint) → sync thread → frames whose
+  lamp bits follow which endpoints are on.
 - `matter/src/halo_radio_ts.c`: the timeslot radio driver.
 - Size-trimmed build: no logging, no Matter/OpenThread shells, LTO; 636 kB of the XIAO's 788 kB
   partition. A minimal Zephyr shell stays on USB CDC: `halo on|off|level N|temp MIREDS` drive the lamp
   directly, `halo last` shows the last frame's result and timeslot counters, `halo crash` the crash
-  black box, `halo dfu` reboots into the board's USB bootloader. Pairing uses the Matter test setup
+  black box (fatal reason, pc, a stack scan, MPSL assert location), `halo front|back on|off` switch
+  one lamp, `halo dfu` reboots into the board's USB bootloader. `prj_debug.conf` (`-DFILE_SUFFIX=debug`)
+  is the same firmware with logging for diagnosis. Pairing uses the Matter test setup
   (passcode 20202021, discriminator 0xF00: manual code 34970112332; uncertified test vendor 0xFFF1,
   which Apple Home accepts after a warning).
 - Boards: `xiao_ble` (UF2, 32 kB storage split 28 kB settings + 4 kB factory-data node) and

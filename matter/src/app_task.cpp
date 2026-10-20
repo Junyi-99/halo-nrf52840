@@ -6,6 +6,7 @@
 #include "clusters/identify.h"
 #include "halo_radio_ts.h"
 
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app-common/zap-generated/ids/Attributes.h>
 #include <app-common/zap-generated/ids/Clusters.h>
 #include <app/persistence/AttributePersistenceProviderInstance.h>
@@ -24,35 +25,44 @@ using namespace ::chip::DeviceLayer;
 
 namespace
 {
-constexpr EndpointId kLightEndpointId = 1;
+constexpr EndpointId kFront = AppTask::kFrontEndpointId;
+constexpr EndpointId kBack = AppTask::kBackEndpointId;
 constexpr uint16_t kMiredsCold = 154;	/* 6500 K */
 constexpr uint16_t kMiredsWarm = 370;	/* 2700 K */
 constexpr uint8_t kLevelMinCode = 0x4c;	/* lamp brightness code range, see USB firmware */
 constexpr uint8_t kLevelMaxCode = 0xfe;
 
-Nrf::Matter::IdentifyCluster sIdentifyCluster(kLightEndpointId, true, []() {
-	Nrf::PostTask([] { Nrf::GetBoard().GetLED(Nrf::DeviceLeds::LED2).Set(false); });
-});
+auto sIdentifyDone = []() { Nrf::PostTask([] { Nrf::GetBoard().GetLED(Nrf::DeviceLeds::LED2).Set(false); }); };
+Nrf::Matter::IdentifyCluster sIdentifyFront(kFront, true, sIdentifyDone);
+Nrf::Matter::IdentifyCluster sIdentifyBack(kBack, true, sIdentifyDone);
 
 /* Level and colour temperature are written often while a slider moves; persist them lazily. */
 DeferredAttribute gDeferred[] = {
-	DeferredAttribute(ConcreteAttributePath(kLightEndpointId, Clusters::LevelControl::Id,
+	DeferredAttribute(ConcreteAttributePath(kFront, Clusters::LevelControl::Id,
 						Clusters::LevelControl::Attributes::CurrentLevel::Id)),
-	DeferredAttribute(ConcreteAttributePath(kLightEndpointId, Clusters::ColorControl::Id,
+	DeferredAttribute(ConcreteAttributePath(kFront, Clusters::ColorControl::Id,
+						Clusters::ColorControl::Attributes::ColorTemperatureMireds::Id)),
+	DeferredAttribute(ConcreteAttributePath(kBack, Clusters::LevelControl::Id,
+						Clusters::LevelControl::Attributes::CurrentLevel::Id)),
+	DeferredAttribute(ConcreteAttributePath(kBack, Clusters::ColorControl::Id,
 						Clusters::ColorControl::Attributes::ColorTemperatureMireds::Id)),
 };
 DefaultAttributePersistenceProvider gSimpleAttributePersistence;
 DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttributePersistence,
-								 Span<DeferredAttribute>(gDeferred, 2),
+								 Span<DeferredAttribute>(gDeferred, 4),
 								 System::Clock::Milliseconds32(5000));
 
 /* Lamp state as the Matter side wants it, and what still has to go out. */
 struct LampState {
-	bool on;
-	uint8_t levelPct;	/* 1..100 */
-	uint8_t tempPct;	/* 0 coldest .. 100 warmest */
+	bool frontOn;
+	bool backOn;
+	uint8_t levelPct;	/* 1..100, shared by both lamps */
+	uint8_t tempPct;	/* 0 coldest .. 100 warmest, shared */
 };
-LampState sState = { false, 50, 50 };
+LampState sState = { false, false, 50, 50 };
+uint8_t sLevelRaw = 254;	/* last Level Control value seen, to mirror it to the other endpoint */
+uint16_t sMiredsRaw = 250;
+bool sMirroring;		/* set while writing the mirrored attribute, so the callback ignores it */
 bool sDirtyPower;
 bool sDirtyTemp;
 bool sReady;	/* attribute writes before the server is up are restores, not commands */
@@ -136,17 +146,23 @@ void HaloThread(void *, void *, void *)
 		bool power = sDirtyPower, temp = sDirtyTemp;
 
 		sDirtyPower = false;
-		sDirtyTemp = s.on ? false : sDirtyTemp;	/* keep a pending temperature until the lamp is on */
+		/* keep a pending temperature until a lamp is on */
+		sDirtyTemp = (s.frontOn || s.backOn) ? false : sDirtyTemp;
 		irq_unlock(key);
 
-		const uint8_t lamps = HALO_FLAG_FRONT | HALO_FLAG_BACK;
+		/* Every frame is an absolute state: which lamps, and POWER. All off is
+		 * sent as an ordinary frame with POWER clear, like the remote does.
+		 */
+		bool on = s.frontOn || s.backOn;
+		uint8_t lamps = on ? ((s.frontOn ? HALO_FLAG_FRONT : 0) | (s.backOn ? HALO_FLAG_BACK : 0))
+				   : (HALO_FLAG_FRONT | HALO_FLAG_BACK);
 
 		if (power) {
-			uint8_t flags = lamps | HALO_FLAG_BRIGHTNESS | (s.on ? HALO_FLAG_POWER : 0);
+			uint8_t flags = lamps | HALO_FLAG_BRIGHTNESS | (on ? HALO_FLAG_POWER : 0);
 
-			SendFrame("brightness", flags, s.on ? PercentToLevelCode(s.levelPct) : kLevelMinCode);
+			SendFrame("brightness", flags, on ? PercentToLevelCode(s.levelPct) : kLevelMinCode);
 		}
-		if (temp && s.on) {
+		if (temp && on) {
 			SendFrame("temperature", lamps | HALO_FLAG_TEMPERATURE | HALO_FLAG_POWER, s.tempPct);
 		}
 	}
@@ -158,49 +174,94 @@ const AppTask::LastFrame &AppTask::GetLastFrame()
 	return sLast;
 }
 
-void AppTask::SeedState(bool on, uint8_t level, uint16_t mireds)
+/* Write a shared attribute to the other endpoint without triggering a new sync.
+ * Only once the server is up: during cluster initialisation each endpoint
+ * restores its own persisted value, and writing into a cluster that has not been
+ * initialised yet faults.
+ */
+template <typename Setter> void Mirror(EndpointId from, Setter set)
+{
+	if (!sReady) {
+		return;
+	}
+	EndpointId other = from == kFront ? kBack : kFront;
+
+	sMirroring = true;
+	set(other);
+	sMirroring = false;
+}
+
+void AppTask::SeedState(EndpointId endpoint, bool on, uint8_t level, uint16_t mireds)
 {
 	unsigned key = irq_lock();
 
-	sState.on = on;
+	if (endpoint == kBack) {
+		sState.backOn = on;
+	} else {
+		sState.frontOn = on;
+	}
 	sState.levelPct = LevelToPercent(level);
 	sState.tempPct = MiredsToPercent(mireds);
+	sLevelRaw = level;
+	sMiredsRaw = mireds;
 	irq_unlock(key);
 }
 
-void AppTask::SetOnOff(bool on)
+void AppTask::SetOnOff(EndpointId endpoint, bool on)
 {
 	unsigned key = irq_lock();
-	bool changed = sState.on != on;
+	bool wasOn = sState.frontOn || sState.backOn;
 
-	sState.on = on;
+	if (endpoint == kBack) {
+		sState.backOn = on;
+	} else {
+		sState.frontOn = on;
+	}
+	bool isOn = sState.frontOn || sState.backOn;
 	irq_unlock(key);
-	LOG_INF("Matter OnOff -> %s", on ? "on" : "off");
-	RequestSync(true, changed && on);	/* re-apply a pending temperature when switching on */
+	RequestSync(true, !wasOn && isOn);	/* re-apply a pending temperature when switching on */
 }
 
-void AppTask::SetLevel(uint8_t level)
+void AppTask::SetLevel(EndpointId endpoint, uint8_t level)
 {
+	if (sMirroring) {
+		return;
+	}
 	uint8_t pct = LevelToPercent(level);
 	unsigned key = irq_lock();
-	bool on = sState.on;
+	bool on = sState.frontOn || sState.backOn;
+	bool changed = sLevelRaw != level;
 
 	sState.levelPct = pct;
+	sLevelRaw = level;
 	irq_unlock(key);
-	LOG_INF("Matter CurrentLevel %u -> %u%%", level, pct);
+	if (changed) {
+		Mirror(endpoint, [level](EndpointId other) {
+			Clusters::LevelControl::Attributes::CurrentLevel::Set(other, level);
+		});
+	}
 	if (on) {
 		RequestSync(true, false);
 	}
 }
 
-void AppTask::SetMireds(uint16_t mireds)
+void AppTask::SetMireds(EndpointId endpoint, uint16_t mireds)
 {
+	if (sMirroring) {
+		return;
+	}
 	uint8_t pct = MiredsToPercent(mireds);
 	unsigned key = irq_lock();
+	bool changed = sMiredsRaw != mireds;
 
 	sState.tempPct = pct;
+	sMiredsRaw = mireds;
 	irq_unlock(key);
-	LOG_INF("Matter ColorTemperatureMireds %u -> %u%% warm", mireds, pct);
+	if (changed) {
+		Mirror(endpoint, [mireds](EndpointId other) {
+			Clusters::ColorControl::Attributes::ColorTemperatureMireds::Set(other, mireds);
+		});
+	}
 	RequestSync(false, true);
 }
 
@@ -217,7 +278,8 @@ CHIP_ERROR AppTask::Init()
 	}
 
 	ReturnErrorOnFailure(Nrf::Matter::RegisterEventHandler(Nrf::Board::DefaultMatterEventHandler, 0));
-	ReturnErrorOnFailure(sIdentifyCluster.Init());
+	ReturnErrorOnFailure(sIdentifyFront.Init());
+	ReturnErrorOnFailure(sIdentifyBack.Init());
 
 	sPid = sys_rand32_get() & 3;
 	k_thread_create(&sHaloThread, sHaloStack, K_THREAD_STACK_SIZEOF(sHaloStack), HaloThread, nullptr,

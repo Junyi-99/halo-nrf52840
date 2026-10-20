@@ -41,7 +41,7 @@
 #define GENERATED_DEFAULTS_COUNT (0)
 
 // This is an array of EmberAfAttributeMinMaxValue structures.
-#define GENERATED_MIN_MAX_DEFAULT_COUNT 5
+#define GENERATED_MIN_MAX_DEFAULT_COUNT 10
 #define GENERATED_MIN_MAX_DEFAULTS                                             \
   {                                                                            \
                                                                                \
@@ -54,12 +54,24 @@
       {(uint16_t)0x32, (uint16_t)0x1, (uint16_t)0xFE}, /* DefaultMoveRate */   \
                                                                                \
       /* Endpoint: 1, Cluster: Color Control (server) */                       \
+      {(uint16_t)0xFA, (uint16_t)0x0,                                          \
+       (uint16_t)0xFEFF}, /* StartUpColorTemperatureMireds */                  \
+                                                                               \
+      /* Endpoint: 2, Cluster: On/Off (server) */                              \
+      {(uint16_t)0xFF, (uint16_t)0x0, (uint16_t)0x2}, /* StartUpOnOff */       \
+                                                                               \
+      /* Endpoint: 2, Cluster: Level Control (server) */                       \
+      {(uint16_t)0x0, (uint16_t)0x0, (uint16_t)0x3},   /* Options */           \
+      {(uint16_t)0xFF, (uint16_t)0x1, (uint16_t)0xFE}, /* OnLevel */           \
+      {(uint16_t)0x32, (uint16_t)0x1, (uint16_t)0xFE}, /* DefaultMoveRate */   \
+                                                                               \
+      /* Endpoint: 2, Cluster: Color Control (server) */                       \
       {(uint16_t)0xFA, (uint16_t)0x0, (uint16_t)0xFEFF}                        \
       /* StartUpColorTemperatureMireds */                                      \
   }
 
 // This is an array of EmberAfAttributeMetadata structures.
-#define GENERATED_ATTRIBUTE_COUNT 214
+#define GENERATED_ATTRIBUTE_COUNT 260
 #define GENERATED_ATTRIBUTES                                                   \
   {                                                                            \
                                                                                \
@@ -724,6 +736,143 @@
        ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                         \
       {ZAP_SIMPLE_DEFAULT(7), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                 \
        ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                    \
+                                                                               \
+      /* Endpoint: 2, Cluster: Identify (server) */                            \
+      {ZAP_EMPTY_DEFAULT(), 0x00000000, 2, ZAP_TYPE(INT16U),                   \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) | ZAP_ATTRIBUTE_MASK(WRITABLE) |   \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* IdentifyTime */                   \
+      {ZAP_EMPTY_DEFAULT(), 0x00000001, 1, ZAP_TYPE(ENUM8),                    \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* IdentifyType */                   \
+      {ZAP_EMPTY_DEFAULT(), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),                 \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                     \
+      {ZAP_EMPTY_DEFAULT(), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                   \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                \
+                                                                               \
+      /* Endpoint: 2, Cluster: Groups (server) */                              \
+      {ZAP_EMPTY_DEFAULT(), 0x00000000, 1, ZAP_TYPE(BITMAP8),                  \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* NameSupport */                        \
+      {ZAP_SIMPLE_DEFAULT(0), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),               \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                         \
+      {ZAP_SIMPLE_DEFAULT(4), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                 \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                    \
+                                                                               \
+      /* Endpoint: 2, Cluster: On/Off (server) */                              \
+      {ZAP_SIMPLE_DEFAULT(0x00), 0x00000000, 1, ZAP_TYPE(BOOLEAN),             \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* OnOff */                          \
+      {ZAP_SIMPLE_DEFAULT(0x01), 0x00004000, 1, ZAP_TYPE(BOOLEAN),             \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* GlobalSceneControl */                 \
+      {ZAP_SIMPLE_DEFAULT(0x0000), 0x00004001, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* OnTime */                         \
+      {ZAP_SIMPLE_DEFAULT(0x0000), 0x00004002, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* OffWaitTime */                    \
+      {ZAP_MIN_MAX_DEFAULTS_INDEX(5), 0x00004003, 1, ZAP_TYPE(ENUM8),          \
+       ZAP_ATTRIBUTE_MASK(MIN_MAX) | ZAP_ATTRIBUTE_MASK(TOKENIZE) |            \
+           ZAP_ATTRIBUTE_MASK(WRITABLE) | ZAP_ATTRIBUTE_MASK(READABLE) |       \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* StartUpOnOff */                   \
+      {ZAP_SIMPLE_DEFAULT(1), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),               \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                         \
+      {ZAP_SIMPLE_DEFAULT(6), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                 \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                    \
+                                                                               \
+      /* Endpoint: 2, Cluster: Level Control (server) */                       \
+      {ZAP_SIMPLE_DEFAULT(0xFE), 0x00000000, 1, ZAP_TYPE(INT8U),               \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) | ZAP_ATTRIBUTE_MASK(READABLE) |           \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* CurrentLevel */                   \
+      {ZAP_SIMPLE_DEFAULT(0x0000), 0x00000001, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* RemainingTime */                      \
+      {ZAP_SIMPLE_DEFAULT(0x01), 0x00000002, 1, ZAP_TYPE(INT8U),               \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* MinLevel */                           \
+      {ZAP_SIMPLE_DEFAULT(0xFE), 0x00000003, 1, ZAP_TYPE(INT8U),               \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* MaxLevel */                           \
+      {ZAP_MIN_MAX_DEFAULTS_INDEX(6), 0x0000000F, 1, ZAP_TYPE(BITMAP8),        \
+       ZAP_ATTRIBUTE_MASK(MIN_MAX) | ZAP_ATTRIBUTE_MASK(WRITABLE) |            \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* Options */                        \
+      {ZAP_SIMPLE_DEFAULT(0x0000), 0x00000010, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* OnOffTransitionTime */            \
+      {ZAP_MIN_MAX_DEFAULTS_INDEX(7), 0x00000011, 1, ZAP_TYPE(INT8U),          \
+       ZAP_ATTRIBUTE_MASK(MIN_MAX) | ZAP_ATTRIBUTE_MASK(WRITABLE) |            \
+           ZAP_ATTRIBUTE_MASK(READABLE) |                                      \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* OnLevel */                        \
+      {ZAP_EMPTY_DEFAULT(), 0x00000012, 2, ZAP_TYPE(INT16U),                   \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) | ZAP_ATTRIBUTE_MASK(READABLE) |           \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* OnTransitionTime */               \
+      {ZAP_EMPTY_DEFAULT(), 0x00000013, 2, ZAP_TYPE(INT16U),                   \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) | ZAP_ATTRIBUTE_MASK(READABLE) |           \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* OffTransitionTime */              \
+      {ZAP_MIN_MAX_DEFAULTS_INDEX(8), 0x00000014, 1, ZAP_TYPE(INT8U),          \
+       ZAP_ATTRIBUTE_MASK(MIN_MAX) | ZAP_ATTRIBUTE_MASK(WRITABLE) |            \
+           ZAP_ATTRIBUTE_MASK(READABLE) |                                      \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* DefaultMoveRate */                \
+      {ZAP_SIMPLE_DEFAULT(255), 0x00004000, 1, ZAP_TYPE(INT8U),                \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) | ZAP_ATTRIBUTE_MASK(WRITABLE) |           \
+           ZAP_ATTRIBUTE_MASK(READABLE) |                                      \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* StartUpCurrentLevel */            \
+      {ZAP_SIMPLE_DEFAULT(3), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),               \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                         \
+      {ZAP_SIMPLE_DEFAULT(6), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                 \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                    \
+                                                                               \
+      /* Endpoint: 2, Cluster: Descriptor (server) */                          \
+      {ZAP_EMPTY_DEFAULT(), 0x00000000, 0, ZAP_TYPE(ARRAY),                    \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* DeviceTypeList */                 \
+      {ZAP_EMPTY_DEFAULT(), 0x00000001, 0, ZAP_TYPE(ARRAY),                    \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ServerList */                     \
+      {ZAP_EMPTY_DEFAULT(), 0x00000002, 0, ZAP_TYPE(ARRAY),                    \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClientList */                     \
+      {ZAP_EMPTY_DEFAULT(), 0x00000003, 0, ZAP_TYPE(ARRAY),                    \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* PartsList */                      \
+      {ZAP_EMPTY_DEFAULT(), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),                 \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                     \
+      {ZAP_EMPTY_DEFAULT(), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                   \
+       ZAP_ATTRIBUTE_MASK(EXTERNAL_STORAGE) |                                  \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                \
+                                                                               \
+      /* Endpoint: 2, Cluster: Color Control (server) */                       \
+      {ZAP_SIMPLE_DEFAULT(0x0000), 0x00000002, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* RemainingTime */                      \
+      {ZAP_SIMPLE_DEFAULT(0x00FA), 0x00000007, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ColorTemperatureMireds */         \
+      {ZAP_SIMPLE_DEFAULT(0x02), 0x00000008, 1, ZAP_TYPE(ENUM8),               \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* ColorMode */                      \
+      {ZAP_SIMPLE_DEFAULT(0x00), 0x0000000F, 1, ZAP_TYPE(BITMAP8),             \
+       ZAP_ATTRIBUTE_MASK(WRITABLE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* Options */                        \
+      {ZAP_EMPTY_DEFAULT(), 0x00000010, 1, ZAP_TYPE(INT8U),                    \
+       ZAP_ATTRIBUTE_MASK(READABLE) |                                          \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* NumberOfPrimaries */              \
+      {ZAP_SIMPLE_DEFAULT(0x02), 0x00004001, 1, ZAP_TYPE(ENUM8),               \
+       ZAP_ATTRIBUTE_MASK(TOKENIZE) |                                          \
+           ZAP_ATTRIBUTE_MASK(READABLE)}, /* EnhancedColorMode */              \
+      {ZAP_SIMPLE_DEFAULT(0x10), 0x0000400A, 2, ZAP_TYPE(BITMAP16),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ColorCapabilities */                  \
+      {ZAP_SIMPLE_DEFAULT(0x009A), 0x0000400B, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ColorTempPhysicalMinMireds */         \
+      {ZAP_SIMPLE_DEFAULT(0x0172), 0x0000400C, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ColorTempPhysicalMaxMireds */         \
+      {ZAP_SIMPLE_DEFAULT(0x009A), 0x0000400D, 2, ZAP_TYPE(INT16U),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* CoupleColorTempToLevelMinMireds */    \
+      {ZAP_MIN_MAX_DEFAULTS_INDEX(9), 0x00004010, 2, ZAP_TYPE(INT16U),         \
+       ZAP_ATTRIBUTE_MASK(MIN_MAX) | ZAP_ATTRIBUTE_MASK(TOKENIZE) |            \
+           ZAP_ATTRIBUTE_MASK(WRITABLE) | ZAP_ATTRIBUTE_MASK(READABLE) |       \
+           ZAP_ATTRIBUTE_MASK(NULLABLE)}, /* StartUpColorTemperatureMireds */  \
+      {ZAP_SIMPLE_DEFAULT(0x10), 0x0000FFFC, 4, ZAP_TYPE(BITMAP32),            \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* FeatureMap */                         \
+      {ZAP_SIMPLE_DEFAULT(7), 0x0000FFFD, 2, ZAP_TYPE(INT16U),                 \
+       ZAP_ATTRIBUTE_MASK(READABLE)}, /* ClusterRevision */                    \
   }
 
 // clang-format off
@@ -899,12 +1048,59 @@
   0x0000004B /* MoveColorTemperature */, \
   0x0000004C /* StepColorTemperature */, \
   chip::kInvalidCommandId /* end of list */, \
+  /* Endpoint: 2, Cluster: Identify (server) */\
+  /*   AcceptedCommandList (index=97) */ \
+  0x00000000 /* Identify */, \
+  0x00000040 /* TriggerEffect */, \
+  chip::kInvalidCommandId /* end of list */, \
+  /* Endpoint: 2, Cluster: Groups (server) */\
+  /*   AcceptedCommandList (index=100) */ \
+  0x00000000 /* AddGroup */, \
+  0x00000001 /* ViewGroup */, \
+  0x00000002 /* GetGroupMembership */, \
+  0x00000003 /* RemoveGroup */, \
+  0x00000004 /* RemoveAllGroups */, \
+  0x00000005 /* AddGroupIfIdentifying */, \
+  chip::kInvalidCommandId /* end of list */, \
+  /*   GeneratedCommandList (index=107)*/ \
+  0x00000000 /* AddGroupResponse */, \
+  0x00000001 /* ViewGroupResponse */, \
+  0x00000002 /* GetGroupMembershipResponse */, \
+  0x00000003 /* RemoveGroupResponse */, \
+  chip::kInvalidCommandId /* end of list */, \
+  /* Endpoint: 2, Cluster: On/Off (server) */\
+  /*   AcceptedCommandList (index=112) */ \
+  0x00000000 /* Off */, \
+  0x00000001 /* On */, \
+  0x00000002 /* Toggle */, \
+  0x00000040 /* OffWithEffect */, \
+  0x00000041 /* OnWithRecallGlobalScene */, \
+  0x00000042 /* OnWithTimedOff */, \
+  chip::kInvalidCommandId /* end of list */, \
+  /* Endpoint: 2, Cluster: Level Control (server) */\
+  /*   AcceptedCommandList (index=119) */ \
+  0x00000000 /* MoveToLevel */, \
+  0x00000001 /* Move */, \
+  0x00000002 /* Step */, \
+  0x00000003 /* Stop */, \
+  0x00000004 /* MoveToLevelWithOnOff */, \
+  0x00000005 /* MoveWithOnOff */, \
+  0x00000006 /* StepWithOnOff */, \
+  0x00000007 /* StopWithOnOff */, \
+  chip::kInvalidCommandId /* end of list */, \
+  /* Endpoint: 2, Cluster: Color Control (server) */\
+  /*   AcceptedCommandList (index=128) */ \
+  0x0000000A /* MoveToColorTemperature */, \
+  0x00000047 /* StopMoveStep */, \
+  0x0000004B /* MoveColorTemperature */, \
+  0x0000004C /* StepColorTemperature */, \
+  chip::kInvalidCommandId /* end of list */, \
 }
 
 // clang-format on
 
 // This is an array of EmberAfCluster structures.
-#define GENERATED_CLUSTER_COUNT 21
+#define GENERATED_CLUSTER_COUNT 27
 // clang-format off
 #define GENERATED_CLUSTERS { \
   { \
@@ -1180,17 +1376,96 @@
       .eventList = nullptr, \
       .eventCount = 0, \
     },\
+  { \
+      /* Endpoint: 2, Cluster: Identify (server) */ \
+      .clusterId = 0x00000003, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(214), \
+      .attributeCount = 4, \
+      .clusterSize = 0, \
+      .mask = ZAP_CLUSTER_MASK(SERVER), \
+      .functions = NULL, \
+      .acceptedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 97 ), \
+      .generatedCommandList = nullptr, \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
+  { \
+      /* Endpoint: 2, Cluster: Groups (server) */ \
+      .clusterId = 0x00000004, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(218), \
+      .attributeCount = 3, \
+      .clusterSize = 7, \
+      .mask = ZAP_CLUSTER_MASK(SERVER) | ZAP_CLUSTER_MASK(INIT_FUNCTION), \
+      .functions = chipFuncArrayGroupsServer, \
+      .acceptedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 100 ), \
+      .generatedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 107 ), \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
+  { \
+      /* Endpoint: 2, Cluster: On/Off (server) */ \
+      .clusterId = 0x00000006, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(221), \
+      .attributeCount = 7, \
+      .clusterSize = 13, \
+      .mask = ZAP_CLUSTER_MASK(SERVER) | ZAP_CLUSTER_MASK(INIT_FUNCTION) | ZAP_CLUSTER_MASK(SHUTDOWN_FUNCTION), \
+      .functions = chipFuncArrayOnOffServer, \
+      .acceptedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 112 ), \
+      .generatedCommandList = nullptr, \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
+  { \
+      /* Endpoint: 2, Cluster: Level Control (server) */ \
+      .clusterId = 0x00000008, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(228), \
+      .attributeCount = 13, \
+      .clusterSize = 21, \
+      .mask = ZAP_CLUSTER_MASK(SERVER) | ZAP_CLUSTER_MASK(INIT_FUNCTION) | ZAP_CLUSTER_MASK(SHUTDOWN_FUNCTION), \
+      .functions = chipFuncArrayLevelControlServer, \
+      .acceptedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 119 ), \
+      .generatedCommandList = nullptr, \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
+  { \
+      /* Endpoint: 2, Cluster: Descriptor (server) */ \
+      .clusterId = 0x0000001D, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(241), \
+      .attributeCount = 6, \
+      .clusterSize = 0, \
+      .mask = ZAP_CLUSTER_MASK(SERVER), \
+      .functions = NULL, \
+      .acceptedCommandList = nullptr, \
+      .generatedCommandList = nullptr, \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
+  { \
+      /* Endpoint: 2, Cluster: Color Control (server) */ \
+      .clusterId = 0x00000300, \
+      .attributes = ZAP_ATTRIBUTE_INDEX(247), \
+      .attributeCount = 13, \
+      .clusterSize = 24, \
+      .mask = ZAP_CLUSTER_MASK(SERVER) | ZAP_CLUSTER_MASK(INIT_FUNCTION) | ZAP_CLUSTER_MASK(SHUTDOWN_FUNCTION), \
+      .functions = chipFuncArrayColorControlServer, \
+      .acceptedCommandList = ZAP_GENERATED_COMMANDS_INDEX( 128 ), \
+      .generatedCommandList = nullptr, \
+      .eventList = nullptr, \
+      .eventCount = 0, \
+    },\
 }
 
 // clang-format on
 
-#define ZAP_FIXED_ENDPOINT_DATA_VERSION_COUNT 20
+#define ZAP_FIXED_ENDPOINT_DATA_VERSION_COUNT 26
 
 // This is an array of EmberAfEndpointType structures.
 #define GENERATED_ENDPOINT_TYPES                                               \
   {                                                                            \
       {ZAP_CLUSTER_INDEX(0), 15, 23},                                          \
       {ZAP_CLUSTER_INDEX(15), 6, 65},                                          \
+      {ZAP_CLUSTER_INDEX(21), 6, 65},                                          \
   }
 
 // Largest attribute size is needed for various buffers
@@ -1203,29 +1478,31 @@ static_assert(ATTRIBUTE_LARGEST <= CHIP_CONFIG_MAX_ATTRIBUTE_STORE_ELEMENT_SIZE,
 #define ATTRIBUTE_SINGLETONS_SIZE (0)
 
 // Total size of attribute storage
-#define ATTRIBUTE_MAX_SIZE (88)
+#define ATTRIBUTE_MAX_SIZE (153)
 
 // Number of fixed endpoints
-#define FIXED_ENDPOINT_COUNT (2)
+#define FIXED_ENDPOINT_COUNT (3)
 
 // Array of endpoints that are supported, the data inside
 // the array is the endpoint number.
-#define FIXED_ENDPOINT_ARRAY {0x0000, 0x0001}
+#define FIXED_ENDPOINT_ARRAY {0x0000, 0x0001, 0x0002}
 
 // Array of profile ids
-#define FIXED_PROFILE_IDS {0x0103, 0x0103}
+#define FIXED_PROFILE_IDS {0x0103, 0x0103, 0x0103}
 
 // Array of device types
-#define FIXED_DEVICE_TYPES {{0x00000012, 1}, {0x00000016, 4}, {0x0000010C, 4}}
+#define FIXED_DEVICE_TYPES                                                     \
+  {{0x00000012, 1}, {0x00000016, 4}, {0x0000010C, 4}, {0x0000010C, 4}}
 
 // Array of device type offsets
-#define FIXED_DEVICE_TYPE_OFFSETS {0, 2}
+#define FIXED_DEVICE_TYPE_OFFSETS {0, 2, 3}
 
 // Array of device type lengths
-#define FIXED_DEVICE_TYPE_LENGTHS {2, 1}
+#define FIXED_DEVICE_TYPE_LENGTHS {2, 1, 1}
 
 // Array of endpoint types supported on each endpoint
-#define FIXED_ENDPOINT_TYPES {0, 1}
+#define FIXED_ENDPOINT_TYPES {0, 1, 2}
 
 // Array of parent endpoints for each endpoint
-#define FIXED_PARENT_ENDPOINTS {kInvalidEndpointId, kInvalidEndpointId}
+#define FIXED_PARENT_ENDPOINTS                                                 \
+  {kInvalidEndpointId, kInvalidEndpointId, kInvalidEndpointId}

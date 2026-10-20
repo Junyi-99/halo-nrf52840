@@ -17,13 +17,20 @@ public:
 
 	CHIP_ERROR StartApp();
 
+	/* Endpoint 1 is the front lamp, endpoint 2 the back lamp. Brightness and colour
+	 * temperature are shared by the lamp, so a change on one endpoint is mirrored
+	 * to the other.
+	 */
+	static constexpr chip::EndpointId kFrontEndpointId = 1;
+	static constexpr chip::EndpointId kBackEndpointId = 2;
+
 	/* Called from Matter attribute callbacks (Matter thread). */
-	void SetOnOff(bool on);
-	void SetLevel(uint8_t level);		/* Level Control 1..254 */
-	void SetMireds(uint16_t mireds);	/* Color Control, 154 (6500 K) .. 370 (2700 K) */
+	void SetOnOff(chip::EndpointId endpoint, bool on);
+	void SetLevel(chip::EndpointId endpoint, uint8_t level);		/* Level Control 1..254 */
+	void SetMireds(chip::EndpointId endpoint, uint16_t mireds);	/* 154 (6500 K) .. 370 (2700 K) */
 
 	/* Seed the cached state from persisted attributes at boot, without transmitting. */
-	void SeedState(bool on, uint8_t level, uint16_t mireds);
+	void SeedState(chip::EndpointId endpoint, bool on, uint8_t level, uint16_t mireds);
 
 	/* Result of the most recent frame, for the "halo last" shell command. */
 	struct LastFrame {
