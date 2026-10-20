@@ -1,0 +1,42 @@
+/* XIAO nRF52840 for halo-matter.
+ *
+ * Flash (Adafruit UF2 bootloader + S140 layout from the board): application at
+ * 0x27000 (788 kB), then the 32 kB storage area which is split here into 28 kB
+ * settings storage and a 4 kB factory-data partition (unused unless factory data
+ * is enabled, but the Matter platform code needs the node to exist).
+ * USB CDC console comes from the board; the RGB LED is used through the DK
+ * LED library; the DK button library needs a (possibly empty) buttons node.
+ */
+/delete-node/ &storage_partition;
+
+&flash0 {
+	partitions {
+		storage_partition: partition@ec000 {
+			label = "Storage";
+			reg = <0x000ec000 0x00007000>;
+		};
+		factory_data_partition: partition@f3000 {
+			label = "factory-data";
+			reg = <0x000f3000 0x00001000>;
+		};
+	};
+};
+
+/ {
+	buttons {
+		compatible = "gpio-keys";
+	};
+};
+
+/* Unused peripherals off */
+&i2c0 {
+	status = "disabled";
+};
+
+&spi2 {
+	status = "disabled";
+};
+
+&qspi {
+	status = "disabled";
+};

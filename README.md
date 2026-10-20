@@ -198,6 +198,32 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
 Uses the legacy Zephyr USB device stack (deprecated in 4.4, still functional) because it needs one
 call to bring up a CDC ACM console; the warnings in the build come from there.
 
+## Matter over Thread (`matter/`)
+
+The XIAO can also be a Matter **Color Temperature Light** on Thread, so the ScreenBar shows up in
+Apple Home (or any Matter controller) with on/off, brightness and colour temperature, no other
+hardware involved. This needs the nRF Connect SDK (v3.4.1 under `~/ncs`, see `matter/build.sh`),
+because Matter and the MPSL radio scheduler only exist there.
+
+How the lamp gets its frames while Thread and Bluetooth LE own the radio: each command requests a
+4 ms **MPSL timeslot**; in the timeslot the firmware starts the oversampled TX, then polls the
+radio from a 20 µs TIMER0 tick (RADIO interrupts are not delivered to the timeslot callback next to
+the 802.15.4 driver), switches to RX for the ACK, and hands the capture back to a thread for
+decoding. Measured on the XIAO with Thread (router) and BLE advertising active: every frame
+reaches the lamp, ACK verified on about two out of three single attempts, three attempts per
+command.
+
+- `matter/src/default_zap/`: data model (light bulb sample + Color Control, temperature feature,
+  154..370 mireds), regenerated with ZAP.
+- `matter/src/app_task.cpp`: Matter attribute changes → lamp state → sync thread → frames.
+- `matter/src/halo_radio_ts.c`: the timeslot radio driver.
+- Shell over USB CDC: `halo on|off|level N|temp MIREDS` drive the lamp directly, `halo dfu` reboots
+  into the UF2 bootloader, `matter onboardingcodes ble` prints the pairing code (test setup code
+  20202021, discriminator 0xF00, manual pairing code 34970112332, uncertified test vendor 0xFFF1 which
+  Apple Home accepts after a warning).
+- Flash: `matter/build/xiao_ble/matter/zephyr/zephyr.uf2` onto the `XIAO-SENSE` drive (771 kB of
+  the 788 kB partition; the 32 kB storage area is split 28 kB settings + 4 kB factory-data node).
+
 ## Acknowledgements
 
 - ScreenBar Halo protocol: [Djoko-cli/benq-screenbar-halo-matter](https://github.com/Djoko-cli/benq-screenbar-halo-matter)

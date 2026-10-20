@@ -1,3 +1,5 @@
 build/
 .halo-next-pid.json
 __pycache__/
+matter/build/
+matter/*.log
