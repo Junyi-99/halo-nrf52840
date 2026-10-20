@@ -1,15 +1,45 @@
 # halo-nrf52840
 
-Experimental: drive a first-generation BenQ ScreenBar Halo from an nRF52840's own radio.
-Companion to [halo-esp32s3](https://github.com/Junyi-99/halo-esp32s3); same serial protocol, same host tool.
+Control a first-generation BenQ ScreenBar Halo from an nRF52840's own radio, and put it in
+**Apple Home** (or any Matter controller) as a Matter over Thread light. Companion to
+[halo-esp32s3](https://github.com/Junyi-99/halo-esp32s3).
 
-**Status: working.** Tested 2026-10-21 against a ScreenBar Halo on an nRF52840 dongle and on a
-Seeed XIAO nRF52840: the lamp answers every command (50/50 ACK bursts seen) and the firmware decodes
-and CRC-verifies the ACK on 65..87% of single attempts; with the tool's default 3 attempts that is
-effectively always. A wrong address gets nothing but noise floor. Brightness, lamp selection and
-colour temperature were all confirmed by eye.
+Two firmwares, one radio trick:
 
-## The problem
+| | `matter/` — Apple Home firmware | root — USB firmware |
+|---|---|---|
+| What it is | Matter over Thread **Color Temperature Light**: on/off, brightness, colour temperature from the Home app, Siri, automations | USB CDC serial controller, same line protocol as halo-esp32s3, `halo_control.py` on the host |
+| Needs | XIAO nRF52840 + a Thread border router (HomePod mini, Apple TV 4K, …) | any nRF52840 board on USB |
+| SDK | nRF Connect SDK v3.4.1 | Zephyr v4.4.2 |
+| Pairing | fixed test code **3497-011-2332**, QR below | n/a |
+
+<p align="center"><img src="docs/matter-pairing-qr.png" width="180" alt="Matter pairing QR code"><br><code>MT:6FCJ142C00KA0648G00</code> · manual code 34970112332</p>
+
+**Status (2026-10-21):** both firmwares verified on the lamp. The Matter firmware is commissioned in
+Apple Home through a HomePod mini; on/off, brightness and colour temperature all reach the lamp with
+verified ACKs, including bursts of slider moves. Apple shows an "uncertified accessory" warning once
+(test vendor ID), then it behaves like any other light. The lamp only ever sends empty ACKs, so
+changes made with the original remote are not reflected back.
+
+## Apple Home quick start
+
+1. Build (`matter/build.sh xiao_ble`, needs NCS v3.4.1 under `~/ncs`) or take a release UF2, double-tap
+   RST on the XIAO and copy `zephyr.uf2` onto the `XIAO-SENSE` drive.
+2. Home app → + → Add Accessory → scan the QR above (or *More options…* → enter 3497-011-2332) →
+   *Add Anyway* on the uncertified warning. Commissioning goes over Bluetooth LE, then the XIAO joins
+   the border router's Thread network; about a minute.
+3. The lamp address is `CONFIG_HALO_LAMP_ADDRESS` in `matter/Kconfig` (default 16224CB1, change it
+   for your own lamp).
+
+Every board flashed with this firmware uses the same pairing code (Matter test discriminator 0xF00,
+passcode 20202021), so pair one board at a time. Already-paired boards do not need the code again:
+sharing with another app goes through the Home app's own pairing mode. Over USB the board also prints
+the codes (`matter onboardingcodes ble`) and takes `halo on|off|level|temp` for direct tests and
+`halo dfu` to reboot into the UF2 bootloader.
+
+## The radio trick (both firmwares)
+
+### The problem
 
 The lamp (Holtek BC5602) listens on 2405 MHz for **125 kbit/s GFSK, ±160 kHz deviation**, Enhanced
 ShockBurst framing. The nRF52840 RADIO offers Nrf_1Mbit, Nrf_2Mbit, Ble_1Mbit, Ble_2Mbit, the coded
