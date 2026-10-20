@@ -6,7 +6,8 @@ Companion to [halo-esp32s3](https://github.com/Junyi-99/halo-esp32s3); same seri
 **Status: working.** Tested 2026-10-21 against a ScreenBar Halo on an nRF52840 dongle and on a
 Seeed XIAO nRF52840: the lamp answers every command (50/50 ACK bursts seen) and the firmware decodes
 and CRC-verifies the ACK on 65..87% of single attempts; with the tool's default 3 attempts that is
-effectively always. A wrong address gets nothing but noise floor.
+effectively always. A wrong address gets nothing but noise floor. Brightness, lamp selection and
+colour temperature were all confirmed by eye.
 
 ## The problem
 
