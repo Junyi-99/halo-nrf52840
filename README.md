@@ -3,10 +3,10 @@
 Experimental: drive a first-generation BenQ ScreenBar Halo from an nRF52840's own radio.
 Companion to [halo-esp32s3](https://github.com/Junyi-99/halo-esp32s3); same serial protocol, same host tool.
 
-**Status: working.** Tested 2026-10-21 on an nRF52840 dongle against a ScreenBar Halo: the lamp
-answers every command (30/30 ACK bursts seen) and the firmware decodes and CRC-verifies the ACK on
-~87% of single attempts (26/30); with the tool's default 3 attempts that is effectively always.
-A wrong address gets nothing but noise floor.
+**Status: working.** Tested 2026-10-21 against a ScreenBar Halo on an nRF52840 dongle and on a
+Seeed XIAO nRF52840: the lamp answers every command (50/50 ACK bursts seen) and the firmware decodes
+and CRC-verifies the ACK on 65..87% of single attempts; with the tool's default 3 attempts that is
+effectively always. A wrong address gets nothing but noise floor.
 
 ## The problem
 
@@ -104,9 +104,16 @@ writes the same unsigned init packet `pkg generate --hw-version 52 --sd-req 0x00
 `nrfutil` here is Nordic's binary in `~/.local/bin` with the `device` command installed;
 `/etc/udev/rules.d/99-halo-nrf52840.rules` makes both USB identities world-accessible.
 
+### XIAO nRF52840 (Adafruit UF2 bootloader)
+
+Nothing to prepare: double-tap RST, copy `build/xiao_ble/zephyr/zephyr.uf2` onto the `XIAO-SENSE`
+drive. Afterwards the firmware's `DFU` command reboots into the drive (GPREGRET = 0x57) and
+`tools/uf2_update.sh` does DFU + mount + copy in one go. `bootloader/xiao_nrf52840_ble_bootloader-*.hex`
+is the official Adafruit bootloader in case a board has lost it (flash over SWD, then UF2 as usual).
+
 ### Other boards
 
-- **UF2 boards (XIAO, nice!nano, Feather):** double-tap reset, copy `zephyr.uf2` onto the drive.
+- **nice!nano, Feather (UF2):** same as the XIAO.
 - **Stock dongle with reset button:** reset into DFU, then the `nordicDfu` program step above.
 - **DK:** `west flash -d build/nrf52840dk_nrf52840` with J-Link, or `-r pyocd`.
 - **Any board over SWD, no bootloader:** `nrf52840dongle/nrf52840/bare` (code at 0x0).
@@ -145,6 +152,7 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
 | ACK decoded and CRC-verified, single attempt | 26 / 30 |
 | Wrong address | no energy above -91 dBm, no match |
 | `halo_control.py` both → off → front, 3 attempts | ACK, ACK (2nd attempt), ACK |
+| XIAO nRF52840, same test | 20/20 bursts at -63 dBm, 13/20 verified, tool ACK first try |
 
 ## If it does not ACK
 
@@ -163,8 +171,10 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
 - `src/main.c`: serial parser and replies, compatible with the ESP32 firmware, plus `DIAG`, `PHY`,
   `DFU`.
 - `tools/halo_control.py`: host CLI, verbatim from halo-esp32s3.
-- `tools/make_dfu_zip.py`, `tools/dfu_update.sh`: USB DFU packaging and one-shot update.
-- `bootloader/`: the rebuilt PCA10059 open bootloader (+MBR) and its `sdk_config.h`.
+- `tools/make_dfu_zip.py`, `tools/dfu_update.sh`: Nordic USB DFU packaging and one-shot update.
+- `tools/uf2_update.sh`: one-shot update for UF2 boards.
+- `bootloader/`: the rebuilt PCA10059 open bootloader (+MBR) with its `sdk_config.h`, and the
+  official Adafruit UF2 bootloader for the XIAO nRF52840.
 
 Uses the legacy Zephyr USB device stack (deprecated in 4.4, still functional) because it needs one
 call to bring up a CDC ACM console; the warnings in the build come from there.

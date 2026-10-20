@@ -22,6 +22,13 @@
 
 #define CMD_LINE_MAX 128
 
+#if defined(CONFIG_BOARD_XIAO_BLE) || defined(CONFIG_BOARD_NICE_NANO) || \
+	defined(CONFIG_BOARD_ADAFRUIT_FEATHER_NRF52840) || defined(CONFIG_BOARD_PROMICRO_NRF52840)
+#define DFU_MAGIC 0x57		/* Adafruit nRF52 bootloader: DFU_MAGIC_UF2_RESET */
+#else
+#define DFU_MAGIC 0xb1		/* Nordic open bootloader: BOOTLOADER_DFU_START */
+#endif
+
 /* Payload byte 0 (flags) of a control packet. */
 #define FLAG_POWER      0x80
 #define FLAG_FRONT      0x40
@@ -59,7 +66,7 @@ static const char HELP_TEXT[] =
 	"  Reply: HALODONE status attempts payload crc16 synth_us total_us turnaround_us ack_address_us ack_crc\n"
 	"DIAG                 Details of the last attempt (RSSI, raw ACK bytes).\n"
 	"PHY NRF1M|BLE1M      Modulator: Nrf_1Mbit (+-170 kHz, default) or Ble_1Mbit (+-250 kHz).\n"
-	"DFU                  Reboot into the USB DFU bootloader (GPREGRET = 0xB1).\n"
+	"DFU                  Reboot into the USB bootloader (UF2 drive or Nordic DFU).\n"
 	"LED R G B            Board LED on if any value is non-zero.\n"
 	"LED?                 Query LED type.\n"
 	"SYNC nonce           Echo synchronization marker.\n"
@@ -173,10 +180,13 @@ static void handle(const char *line)
 	} else if (!strncmp(line, "HALO ", 5)) {
 		handle_halo(line + 5);
 	} else if (!strcmp(line, "DFU")) {
-		/* Nordic's open bootloader checks GPREGRET for BOOTLOADER_DFU_START. */
+		/* Reboot into the board's USB bootloader through GPREGRET: Adafruit UF2
+		 * bootloader (XIAO, nice!nano, Feather) wants 0x57 and then shows a drive;
+		 * Nordic's open bootloader wants BOOTLOADER_DFU_START = 0xB1.
+		 */
 		reply("OK DFU rebooting\n");
 		k_msleep(50);
-		NRF_POWER->GPREGRET = 0xb1;
+		NRF_POWER->GPREGRET = DFU_MAGIC;
 		sys_reboot(SYS_REBOOT_COLD);
 	} else if (!strcmp(line, "DIAG")) {
 		handle_diag();
