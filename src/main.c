@@ -116,7 +116,7 @@ static const char HELP_TEXT[] =
 	"DIAG                 Details of the last attempt (RSSI, raw ACK bytes).\n"
 	"PHY NRF1M|BLE1M      Modulator: Nrf_1Mbit (+-170 kHz, default) or Ble_1Mbit (+-250 kHz).\n"
 	"DFU                  Reboot into the USB bootloader (UF2 drive or Nordic DFU).\n"
-	"LED R G B            Board LED, 0..255 per colour (PWM with gamma on XIAO/dongle/Pro Micro).\n"
+	"LED R G B            Board LED, 0..255 per colour (PWM with gamma on XIAO/dongle/Pro Micro); 50 50 50 at boot.\n"
 	"LED?                 Query LED type.\n"
 	"SYNC nonce           Echo synchronization marker.\n"
 	"RELEASE              Acknowledge host cleanup.\n"
@@ -139,6 +139,35 @@ static void replyf(const char *format, ...)
 	reply(line);
 }
 
+/* Board LED at power-up, before the host sends anything. */
+#define LED_DEFAULT_R 50
+#define LED_DEFAULT_G 50
+#define LED_DEFAULT_B 50
+
+static void led_set(unsigned r, unsigned g, unsigned b)
+{
+#if HAVE_PWM_LED
+	if (ARRAY_SIZE(pwm_leds) == 3) {
+		pwm_led_set(0, r);
+		pwm_led_set(1, g);
+		pwm_led_set(2, b);
+	} else {
+		pwm_led_set(0, r > g ? (r > b ? r : b) : (g > b ? g : b));
+	}
+#else
+	if (!HAVE_LED) {
+		return;
+	}
+	if (ARRAY_SIZE(leds) == 3) {
+		gpio_pin_set_dt(&leds[0], r != 0);
+		gpio_pin_set_dt(&leds[1], g != 0);
+		gpio_pin_set_dt(&leds[2], b != 0);
+	} else {
+		gpio_pin_set_dt(&leds[0], (r | g | b) != 0);
+	}
+#endif
+}
+
 static void handle_led(const char *line)
 {
 	unsigned r, g, b;
@@ -149,28 +178,11 @@ static void handle_led(const char *line)
 		reply("ERR led_args\n");
 		return;
 	}
-#if HAVE_PWM_LED
-	if (ARRAY_SIZE(pwm_leds) == 3) {
-		pwm_led_set(0, r);
-		pwm_led_set(1, g);
-		pwm_led_set(2, b);
-	} else {
-		pwm_led_set(0, r > g ? (r > b ? r : b) : (g > b ? g : b));
-	}
-	replyf("OK LED %u %u %u\n", r, g, b);
-	return;
-#endif
-	if (!HAVE_LED) {
+	if (!HAVE_PWM_LED && !HAVE_LED) {
 		reply("ERR led_init\n");
 		return;
 	}
-	if (ARRAY_SIZE(leds) == 3) {
-		gpio_pin_set_dt(&leds[0], r != 0);
-		gpio_pin_set_dt(&leds[1], g != 0);
-		gpio_pin_set_dt(&leds[2], b != 0);
-	} else {
-		gpio_pin_set_dt(&leds[0], (r | g | b) != 0);
-	}
+	led_set(r, g, b);
 	replyf("OK LED %u %u %u\n", r, g, b);
 }
 
@@ -288,19 +300,14 @@ static void handle(const char *line)
 
 int main(void)
 {
-#if HAVE_PWM_LED
-	for (unsigned i = 0; i < ARRAY_SIZE(pwm_leds); i++) {
-		if (pwm_is_ready_dt(&pwm_leds[i])) {
-			pwm_set_pulse_dt(&pwm_leds[i], 0);
-		}
-	}
-#else
+#if !HAVE_PWM_LED
 	for (unsigned i = 0; i < ARRAY_SIZE(leds); i++) {
 		if (gpio_is_ready_dt(&leds[i])) {
 			gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT_INACTIVE);
 		}
 	}
 #endif
+	led_set(LED_DEFAULT_R, LED_DEFAULT_G, LED_DEFAULT_B);
 	if (usb_enable(NULL) != 0) {
 		return 0;
 	}

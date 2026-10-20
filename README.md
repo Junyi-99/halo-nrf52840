@@ -143,6 +143,7 @@ python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # s
 `LED R G B` drives the three dies of the XIAO's RGB LED / the dongle's LD2 with PWM (1 kHz,
 gamma 2, so 1 is just visible and 255 is full); the Pro Micro's single LED follows the brightest
 channel. The PWM pin maps live in `boards/*.overlay`; boards without one fall back to GPIO on/off.
+At power-up the LED shows a dim white (`LED 50 50 50`) until the host changes it.
 
 Serial, newline terminated, type `HELP` for the full list:
 
