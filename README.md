@@ -158,14 +158,6 @@ PHY NRF1M|BLE1M modulator (default NRF1M)
 | `halo_control.py` both → off → front, 3 attempts | ACK, ACK (2nd attempt), ACK |
 | XIAO nRF52840, same test | 20/20 bursts at -63 dBm, 13/20 verified, tool ACK first try |
 
-## If it does not ACK
-
-1. `DIAG` first. `rssi_max` around -75 dBm at 150..250 µs means the lamp answered and only
-   decoding failed; -91 dBm means nothing came back: wrong address, lamp unplugged, or out of range.
-2. Count the PID: the lamp drops a frame whose PID and CRC equal the previous one. The host tool
-   advances it for you; manual tests must change `pid` between commands.
-3. `PHY BLE1M` (±250 kHz) exists for experiments; NRF1M is the one that is known to work.
-
 ## Matter over Thread (`matter/`)
 
 The XIAO can also be a Matter **Color Temperature Light** on Thread, so the ScreenBar shows up in
