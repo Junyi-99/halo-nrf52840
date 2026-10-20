@@ -121,27 +121,6 @@ drive. Afterwards the firmware's `DFU` command reboots into the drive (GPREGRET 
 `tools/uf2_update.sh` does DFU + mount + copy in one go. `bootloader/xiao_nrf52840_ble_bootloader-*.hex`
 is the official Adafruit bootloader in case a board has lost it (flash over SWD, then UF2 as usual).
 
-### Pro Micro / SuperMini nRF52840 (nice!nano clones, UF2)
-
-Same as the XIAO with the `promicro_nrf52840/nrf52840/uf2` build. One check first: the app address
-depends on the SoftDevice the bootloader carries. Open the drive's `INFO_UF2.TXT`: `S140 6.1.1`
-(nice!nano layout) wants the Pro Micro build (0x26000); `S140 7.3.0` wants the XIAO build (0x27000,
-only the LED pin differs). Flashing the wrong one overwrites part of the SoftDevice and the board
-just drops back into the bootloader; re-copy the right UF2.
-
-### Other boards
-
-- **Feather (UF2):** same as the XIAO.
-- **nRF52840 dongle:** reset into its Nordic DFU bootloader, then
-  `nrfutil device program --firmware build/halo_dongle.zip --traits nordicDfu` (the zip comes from
-  `tools/make_dfu_zip.py`; `tools/dfu_update.sh` does the whole cycle using the firmware's `DFU`
-  command). `bootloader/` holds a rebuilt PCA10059 open bootloader that also enters DFU via GPREGRET,
-  for dongles without a reset button.
-- **DK:** `west flash -d build/nrf52840dk_nrf52840` with J-Link, or `-r pyocd`.
-- **Any board over SWD, no bootloader:** `nrf52840dongle/nrf52840/bare` (code at 0x0).
-
-The board enumerates as a USB CDC ACM port (product string `halo-nrf52840`).
-
 ## Use
 
 Same protocol as halo-esp32s3, so its tool works unchanged (a copy is in `tools/`):
@@ -152,11 +131,6 @@ python tools/halo_control.py --address 16224CB1 --mode back --brightness 50
 python tools/halo_control.py --mode front --brightness 100 --led on          # LED in the mode colour, green 1 s on ACK
 python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # same with a custom colour
 ```
-
-`LED R G B` drives the three dies of the XIAO's RGB LED / the dongle's LD2 with PWM (1 kHz,
-gamma 2, so 1 is just visible and 255 is full); the Pro Micro's single LED follows the brightest
-channel. The PWM pin maps live in `boards/*.overlay`; boards without one fall back to GPIO on/off.
-At power-up the LED shows a dim white (`LED 50 50 50`) until the host changes it.
 
 Serial, newline terminated, type `HELP` for the full list:
 
