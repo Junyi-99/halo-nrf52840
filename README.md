@@ -146,6 +146,7 @@ Serial, newline terminated, type `HELP` for the full list:
 
 ```text
 HALO <address_hex> <mode 0-3> <brightness 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
+HALOTEMP <address_hex> <mode 0-3> <temperature 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
   -> HALODONE <ACK|NO_ACK|RX_ERROR> <attempts> <payload_hex> <crc16> 0 <total_us> <turnaround_us> <ack_us> <ack_crc16>
 DIAG            last attempt: RSSI max/when, RSSI during the ACK, bit mismatches, raw bytes
 PHY NRF1M|BLE1M modulator (default NRF1M)

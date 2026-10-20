@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Send one command to a BenQ ScreenBar Halo through the ESP32-S3 controller.
+"""Send one command to a BenQ ScreenBar Halo through the controller board.
 Brightness 1..100 maps to raw 4C..FE; zero means off, not calibrated luminance.
+Colour temperature 0 (coldest)..100 (warmest) goes out as its own frame (HALOTEMP).
 """
 import argparse
 import json
@@ -71,8 +72,11 @@ def parse_args():
                     help='4-byte pairing address in on-air hex order')
     ap.add_argument('--mode', choices=MODES, default='front',
                     help='which lamp side to light')
-    ap.add_argument('--brightness', metavar='0-100', type=int, choices=range(101), default=50,
-                    help='lamp brightness, 0 is off')
+    ap.add_argument('--brightness', metavar='0-100', type=int, choices=range(101), default=argparse.SUPPRESS,
+                    help='lamp brightness, 0 is off (default 50 unless only --temperature is given)')
+    ap.add_argument('--temperature', metavar='0-100', type=int, choices=range(101), default=argparse.SUPPRESS,
+                    help='colour temperature, 0 coldest .. 100 warmest; sent as a second frame '
+                         'when combined with --brightness (needs HALOTEMP firmware support)')
     ap.add_argument('--gain', metavar='0-10', type=int, choices=range(11), default=8,
                     help='TX gain')
     ap.add_argument('--attempts', metavar='1-5', type=int, choices=range(1, 6), default=3,
@@ -95,6 +99,11 @@ def parse_args():
         ap.error('address must be hex')
     if not 0 <= a.address <= 0xffffffff:
         ap.error('address must fit 4 bytes')
+    a.temperature = getattr(a, 'temperature', None)
+    if not hasattr(a, 'brightness'):
+        a.brightness = None if a.temperature is not None else 50
+    if a.mode == 'off' and a.brightness is None:
+        a.brightness = 0
     if hasattr(a, 'rgb'):
         try:
             a.rgb = tuple(int(x) for x in a.rgb.split(','))
@@ -143,7 +152,7 @@ def main():
     a = parse_args()
     pid = load_pid(getattr(a, 'pid', None))
     led = getattr(a, 'led', None)
-    rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode if a.brightness else 'off']
+    rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode if a.mode != 'off' else 'off']
 
     with HaloClient(a.port) as client:
         if led is not None:
@@ -157,15 +166,24 @@ def main():
         elif led == 'off':
             set_led(client, LED_OFF)
 
-        line = f'HALO {a.address:08X} {MODES[a.mode]} {a.brightness} {pid} {a.gain} {a.attempts}'
-        response = client.command(line)
-        f = response.split()
-        if len(f) != 10 or f[0] != 'HALODONE' or f[1] not in ('ACK', 'NO_ACK', 'RX_ERROR'):
-            raise RuntimeError('Unexpected reply: ' + response)
+        frames = []
+        if a.brightness is not None:
+            frames.append(('HALO', a.brightness))
+        if a.temperature is not None:
+            frames.append(('HALOTEMP', a.temperature))
 
-        save_pid(pid)
-        print(response, flush=True)
-        if f[1] != 'ACK':
+        acked = True
+        for command, value in frames:
+            line = f'{command} {a.address:08X} {MODES[a.mode]} {value} {pid} {a.gain} {a.attempts}'
+            response = client.command(line)
+            f = response.split()
+            if len(f) != 10 or f[0] != 'HALODONE' or f[1] not in ('ACK', 'NO_ACK', 'RX_ERROR'):
+                raise RuntimeError('Unexpected reply: ' + response)
+            save_pid(pid)
+            pid = (pid + 1) % 4
+            print(response, flush=True)
+            acked = acked and f[1] == 'ACK'
+        if not acked:
             raise SystemExit('No verified ACK; lamp state is unknown.')
 
         if led == 'on':

@@ -34,6 +34,7 @@
 #define FLAG_FRONT      0x40
 #define FLAG_BACK       0x01
 #define FLAG_BRIGHTNESS 0x04	/* selector: this packet carries a brightness value */
+#define FLAG_TEMPERATURE 0x02	/* selector: this packet carries a colour temperature */
 
 /* Payload byte 1: raw brightness code. 1..100 % maps linearly onto 0x4C..0xFE. */
 #define LEVEL_MIN 0x4c
@@ -84,6 +85,8 @@ static const char HELP_TEXT[] =
 	"  ATTEMPTS: 1..5 maximum tries. Stop on matching CRC-valid ACK.\n"
 	"  Example: HALO 16224CB1 2 50 0 8 3\n"
 	"  Reply: HALODONE status attempts payload crc16 synth_us total_us turnaround_us ack_address_us ack_crc\n"
+	"HALOTEMP ADDR MODE TEMP PID GAIN ATTEMPTS\n"
+	"  Same as HALO but the frame carries colour temperature TEMP 0 (coldest)..100 (warmest).\n"
 	"DIAG                 Details of the last attempt (RSSI, raw ACK bytes).\n"
 	"PHY NRF1M|BLE1M      Modulator: Nrf_1Mbit (+-170 kHz, default) or Ble_1Mbit (+-250 kHz).\n"
 	"DFU                  Reboot into the USB bootloader (UF2 drive or Nordic DFU).\n"
@@ -134,7 +137,10 @@ static void handle_led(const char *line)
 	replyf("OK LED %u %u %u\n", r, g, b);
 }
 
-static void handle_halo(const char *args)
+/* HALO: brightness frame (LEVEL 0..100, 0 = off). HALOTEMP: colour temperature
+ * frame (TEMP 0 coldest .. 100 warmest). Each frame carries exactly one selector.
+ */
+static void handle_halo(const char *args, bool temperature)
 {
 	unsigned addr, mode, level, pid, gain, max_attempts;
 	char extra;
@@ -149,10 +155,18 @@ static void handle_halo(const char *args)
 
 	/* Mode 0 keeps the front-lamp bits of an ordinary command but with POWER clear. */
 	uint8_t lamps = mode == 2 ? FLAG_BACK : mode == 3 ? (FLAG_FRONT | FLAG_BACK) : FLAG_FRONT;
-	bool on = mode != 0 && level != 0;
-	uint8_t flags = lamps | FLAG_BRIGHTNESS | (on ? FLAG_POWER : 0);
-	uint8_t value = level ? (uint8_t)(LEVEL_MIN + ((level - 1) * (LEVEL_MAX - LEVEL_MIN) + 49) / 99)
+	uint8_t flags, value;
+
+	if (temperature) {
+		flags = lamps | FLAG_TEMPERATURE | (mode != 0 ? FLAG_POWER : 0);
+		value = (uint8_t)level;
+	} else {
+		bool on = mode != 0 && level != 0;
+
+		flags = lamps | FLAG_BRIGHTNESS | (on ? FLAG_POWER : 0);
+		value = level ? (uint8_t)(LEVEL_MIN + ((level - 1) * (LEVEL_MAX - LEVEL_MIN) + 49) / 99)
 			      : LEVEL_MIN;
+	}
 
 	int64_t start = k_uptime_ticks();
 	uint16_t crc;
@@ -204,7 +218,9 @@ static void handle(const char *line)
 	} else if (!strcmp(line, "HALO?")) {
 		reply("HALO 3 ACK MAX_ATTEMPTS\n");
 	} else if (!strncmp(line, "HALO ", 5)) {
-		handle_halo(line + 5);
+		handle_halo(line + 5, false);
+	} else if (!strncmp(line, "HALOTEMP ", 9)) {
+		handle_halo(line + 9, true);
 	} else if (!strcmp(line, "DFU")) {
 		/* Reboot into the board's USB bootloader through GPREGRET: Adafruit UF2
 		 * bootloader (XIAO, nice!nano, Feather) wants 0x57 and then shows a drive;
