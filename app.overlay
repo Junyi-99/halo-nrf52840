@@ -1,0 +1,15 @@
+/* CDC ACM console. Most nRF52840 boards (XIAO BLE, dongle, nice!nano, Feather UF2)
+ * already define board_cdc_acm_uart through boards/common/usb/cdc_acm_serial.dtsi;
+ * this merges with it and creates it for boards that lack it (nRF52840 DK).
+ */
+/ {
+	chosen {
+		zephyr,console = &board_cdc_acm_uart;
+	};
+};
+
+&zephyr_udc0 {
+	board_cdc_acm_uart: board_cdc_acm_uart {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
