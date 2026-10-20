@@ -211,7 +211,8 @@ radio from a 20 µs TIMER0 tick (RADIO interrupts are not delivered to the times
 the 802.15.4 driver), switches to RX for the ACK, and hands the capture back to a thread for
 decoding. Measured on the XIAO with Thread (router) and BLE advertising active: every frame
 reaches the lamp, ACK verified on about two out of three single attempts, three attempts per
-command.
+command. Commissioned into Apple Home through a HomePod mini on 2026-10-21; on/off, brightness and
+colour temperature from the Home app all reached the lamp with verified ACKs.
 
 - `matter/src/default_zap/`: data model (light bulb sample + Color Control, temperature feature,
   154..370 mireds), regenerated with ZAP.
