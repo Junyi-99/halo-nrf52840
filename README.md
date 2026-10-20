@@ -209,7 +209,11 @@ How the lamp gets its frames while Thread and Bluetooth LE own the radio: each c
 4 ms **MPSL timeslot**; in the timeslot the firmware starts the oversampled TX, then polls the
 radio from a 20 µs TIMER0 tick (RADIO interrupts are not delivered to the timeslot callback next to
 the 802.15.4 driver), switches to RX for the ACK, and hands the capture back to a thread for
-decoding. Measured on the XIAO with Thread (router) and BLE advertising active: every frame
+decoding. TIMER0 is MPSL's during the slot (it runs it at 1 MHz and times the slot end with it):
+the firmware only sets a compare channel on it. Stopping or clearing it trips an MPSL assert, which
+is what the first version did under a stream of slider commands. A crash black box in retained RAM
+records fatal errors (and, through `CONFIG_MPSL_ASSERT_HANDLER`, MPSL's assert file and line) and
+prints them on the next boot. Measured on the XIAO with Thread (router) and BLE advertising active: every frame
 reaches the lamp, ACK verified on about two out of three single attempts, three attempts per
 command. Commissioned into Apple Home through a HomePod mini on 2026-10-21; on/off, brightness and
 colour temperature from the Home app all reached the lamp with verified ACKs.

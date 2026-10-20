@@ -69,25 +69,29 @@ static uint32_t phase_deadline_us;
 
 #define TICK_US 20u
 
-/* TIMER0 belongs to the application during the timeslot. Run it ourselves as a
- * 1 MHz free-running clock rather than assuming MPSL started it.
+/* MPSL starts TIMER0 at 1 MHz when the timeslot begins and uses it for its own
+ * end-of-slot bookkeeping, so it is never stopped, cleared or reconfigured here:
+ * CC[0] is the application tick, CC[1] a capture register for reading time.
+ * Only if the counter is provably not advancing is the timer started.
  */
-static void timer_start(void)
-{
-	MPSL_TIMER0->TASKS_STOP = 1;
-	MPSL_TIMER0->INTENCLR = 0xffffffffu;
-	MPSL_TIMER0->SHORTS = 0;
-	MPSL_TIMER0->MODE = TIMER_MODE_MODE_Timer;
-	MPSL_TIMER0->BITMODE = TIMER_BITMODE_BITMODE_32Bit;
-	MPSL_TIMER0->PRESCALER = 4;
-	MPSL_TIMER0->TASKS_CLEAR = 1;
-	MPSL_TIMER0->TASKS_START = 1;
-}
-
 static inline uint32_t now_us(void)
 {
-	MPSL_TIMER0->TASKS_CAPTURE[2] = 1;
-	return MPSL_TIMER0->CC[2];
+	MPSL_TIMER0->TASKS_CAPTURE[1] = 1;
+	return MPSL_TIMER0->CC[1];
+}
+
+static void timer_check(void)
+{
+	uint32_t a = now_us();
+
+	for (volatile unsigned n = 0; n < 50; n++) {
+	}
+	if (now_us() == a) {
+		MPSL_TIMER0->MODE = TIMER_MODE_MODE_Timer;
+		MPSL_TIMER0->BITMODE = TIMER_BITMODE_BITMODE_32Bit;
+		MPSL_TIMER0->PRESCALER = 4;
+		MPSL_TIMER0->TASKS_START = 1;
+	}
 }
 
 
@@ -149,6 +153,12 @@ static void tick_arm(void)
 	MPSL_TIMER0->INTENSET = TIMER_INTENSET_COMPARE0_Msk;
 }
 
+static void tick_disarm(void)
+{
+	MPSL_TIMER0->INTENCLR = TIMER_INTENCLR_COMPARE0_Msk;
+	MPSL_TIMER0->EVENTS_COMPARE[0] = 0;
+}
+
 static void phase_begin(uint32_t duration_us)
 {
 	phase_deadline_us = now_us() + duration_us;
@@ -157,8 +167,6 @@ static void phase_begin(uint32_t duration_us)
 
 static void start_tx(void)
 {
-	NRF_RADIO->POWER = 0;
-	NRF_RADIO->POWER = 1;
 	radio_configure();
 	NRF_RADIO->PCNF1 = pcnf1(HALO_PACKET_BITS, 4);
 	NRF_RADIO->BASE0 = 0x00ff00ffu;
@@ -167,7 +175,6 @@ static void start_tx(void)
 	NRF_RADIO->PACKETPTR = (uint32_t)tx_buf;
 	NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk | RADIO_SHORTS_END_DISABLE_Msk;
 	clear_events();
-	NRF_RADIO->INTENSET = RADIO_INTENSET_DISABLED_Msk;
 	NRF_RADIO->TASKS_TXEN = 1;
 	slot_state = SLOT_TX;
 	phase_begin(TX_TIMEOUT_US);
@@ -186,7 +193,6 @@ static void start_rx(void)
 			    RADIO_SHORTS_ADDRESS_RSSISTART_Msk;
 	memset(rx_buf, 0xa5, sizeof(rx_buf));
 	clear_events();
-	NRF_RADIO->INTENSET = RADIO_INTENSET_DISABLED_Msk;
 	NRF_RADIO->TASKS_RXEN = 1;
 	slot_state = SLOT_RX;
 	phase_begin(RX_WINDOW_US);
@@ -196,7 +202,7 @@ static void finish_slot(bool rx_ended)
 {
 	NRF_RADIO->INTENCLR = 0xffffffffu;
 	NRF_RADIO->SHORTS = 0;
-	MPSL_TIMER0->INTENCLR = 0xffffffffu;
+	tick_disarm();
 	if (rx_ended) {
 		slot_rssi = -(int)(NRF_RADIO->RSSISAMPLE & 0x7f);
 	}
@@ -207,8 +213,7 @@ static void finish_slot(bool rx_ended)
 	NRF_RADIO->TASKS_DISABLE = 1;
 	for (unsigned n = 0; !NRF_RADIO->EVENTS_DISABLED && n < 2000u; n++) {
 	}
-	NRF_RADIO->EVENTS_DISABLED = 0;
-	MPSL_TIMER0->TASKS_STOP = 1;
+	clear_events();
 	slot_rx_ended = rx_ended;
 	slot_state = SLOT_DONE;
 	slot_done = true;
@@ -277,7 +282,7 @@ static mpsl_timeslot_signal_return_param_t *timeslot_callback(mpsl_timeslot_sess
 
 	switch (signal) {
 	case MPSL_TIMESLOT_SIGNAL_START:
-		timer_start();
+		timer_check();
 		slot_rssi = -128;
 		slot_started = true;
 		start_tx();

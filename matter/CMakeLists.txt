@@ -27,6 +27,7 @@ target_sources(app PRIVATE
   src/zcl_callbacks.cpp
   src/halo_radio_ts.c
   src/halo_shell.cpp
+  src/crash_box.c
   ${CHIP_ROOT}/src/app/persistence/DeferredAttributePersistenceProvider.cpp
 )
 
