@@ -114,12 +114,7 @@ Outputs land in `build/<board>/zephyr/` as `zephyr.uf2` / `zephyr.hex`.
 
 ## Flash
 
-### XIAO nRF52840 (Adafruit UF2 bootloader)
-
-Nothing to prepare: double-tap RST, copy `build/xiao_ble/zephyr/zephyr.uf2` onto the `XIAO-SENSE`
-drive. Afterwards the firmware's `DFU` command reboots into the drive (GPREGRET = 0x57) and
-`tools/uf2_update.sh` does DFU + mount + copy in one go. `bootloader/xiao_nrf52840_ble_bootloader-*.hex`
-is the official Adafruit bootloader in case a board has lost it (flash over SWD, then UF2 as usual).
+Copy the UF2 onto the board's bootloader drive (double-tap RST on the XIAO), or program the hex over SWD with a J-Link; later updates go through the firmware's `DFU` / `halo dfu` command.
 
 ## Use
 
