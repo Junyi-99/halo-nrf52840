@@ -8,7 +8,7 @@ UF2=${2:-$(dirname "$0")/../build/xiao_ble/zephyr/zephyr.uf2}
 python3 -c "
 import serial, time
 p = serial.Serial('$PORT', 115200, timeout=1); p.dtr = p.rts = False
-p.write(b'DFU\n'); time.sleep(0.2)
+p.write(b'DFU\nhalo dfu\n'); time.sleep(0.2)
 " 2>/dev/null || true
 DEV=
 for i in $(seq 1 40); do
