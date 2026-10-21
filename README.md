@@ -6,13 +6,26 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 <p align="center"><img src="docs/matter-pairing-qr.png" width="180" alt="Matter pairing QR code"><br><code>MT:6FCJ142C00KA0648G00</code> · manual code 34970112332</p>
 
-## Build
+## Prerequisites
 
-Prerequisites: a [Zephyr](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
-v4.4 workspace with the Zephyr SDK for the USB firmware; an
-[nRF Connect SDK](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation.html) v3.4.1
-workspace for the Matter firmware. The build scripts look for them in `~/zephyrproject` and `~/ncs`
-(override with `ZEPHYR_WORKSPACE`, `ZEPHYR_SDK_INSTALL_DIR`, `NCS_WORKSPACE`).
+- A Seeed **XIAO nRF52840** (other nRF52840 boards work too, see the build targets below).
+- A Matter controller with a Thread border router: for Apple Home a HomePod mini or Apple TV 4K.
+- Your ScreenBar Halo's **pairing address**, 4 bytes in on-air order (for example `16224CB1`). This
+  firmware does not discover it; halo-esp32s3 and
+  [benq-screenbar-halo-matter](https://github.com/Djoko-cli/benq-screenbar-halo-matter) describe
+  how to capture it from the original remote.
+- Toolchains: a [Zephyr](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
+  v4.4 workspace with the Zephyr SDK for the USB firmware; an
+  [nRF Connect SDK](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation.html) v3.4.1
+  workspace for the Matter firmware. The build scripts look for them in `~/zephyrproject` and `~/ncs`
+  (override with `ZEPHYR_WORKSPACE`, `ZEPHYR_SDK_INSTALL_DIR`, `NCS_WORKSPACE`).
+
+Put your lamp's address into the firmware before building: `CONFIG_HALO_LAMP_ADDRESS` in
+`matter/Kconfig` (default `0x16224CB1`), or pass it on the command line,
+`matter/build.sh xiao_ble -- -DCONFIG_HALO_LAMP_ADDRESS=0x16224CB1`. The USB firmware takes the
+address with every command instead, so it needs no change.
+
+## Build
 
 ```sh
 ./build.sh xiao_ble                         # Seeed XIAO nRF52840 (UF2, app at 0x27000)
@@ -71,10 +84,8 @@ Board LED:
 
 Notes: every board flashed with this firmware uses the same pairing code (Matter test
 discriminator 0xF00, passcode 20202021), so pair one board at a time. Sharing an already-paired
-board with another app goes through the Home app's own pairing mode. The lamp address is
-`CONFIG_HALO_LAMP_ADDRESS` in `matter/Kconfig` (default 16224CB1, change it for your own lamp). The
-lamp only ever sends empty acknowledgements, so changes made with the original remote are not
-reflected in the Home app.
+board with another app goes through the Home app's own pairing mode. The lamp only ever sends empty
+acknowledgements, so changes made with the original remote are not reflected in the Home app.
 
 ## Details
 
