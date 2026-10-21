@@ -22,7 +22,7 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 Put your lamp's address into the firmware before building: `CONFIG_HALO_LAMP_ADDRESS` in
 `matter/Kconfig` (default `0x16224CB1`), or pass it on the command line,
-`matter/build.sh xiao_ble -- -DCONFIG_HALO_LAMP_ADDRESS=0x16224CB1`. The USB firmware takes the
+`matter/build.sh xiao_ble -- -Dmatter_CONFIG_HALO_LAMP_ADDRESS=0x16224CB1`. The USB firmware takes the
 address with every command instead, so it needs no change.
 
 ## Build
@@ -62,8 +62,8 @@ hex over SWD with a J-Link.
 
 Pairing with Apple Home (any Matter controller works the same way):
 
-1. Flash the Matter firmware (see Build and Flash). The blue LED starts blinking slowly: the board is
-   waiting to be paired.
+1. Build and flash the Matter firmware. The blue LED starts blinking slowly: the board is waiting to
+   be paired.
 2. Home app → **+** → **Add Accessory** → scan the QR code above (or *More options…* → enter
    **3497-011-2332**) → *Add Anyway* on the "uncertified accessory" warning. Commissioning goes over
    Bluetooth LE (blue LED blinks fast), then the board joins the border router's Thread network (green
