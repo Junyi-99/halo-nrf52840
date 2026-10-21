@@ -21,6 +21,8 @@ verified ACKs, including bursts of slider moves. Apple shows an "uncertified acc
 (test vendor ID), then it behaves like any other light. The lamp only ever sends empty ACKs, so
 changes made with the original remote are not reflected back.
 
+<p align="center"><img src="docs/apple-home-two-lights.jpeg" width="260" alt="The ScreenBar Halo in Apple Home as Mainlight and Backlight">&nbsp;&nbsp;<img src="docs/xiao-nrf52840.jpeg" width="300" alt="Seeed XIAO nRF52840"></p>
+
 ## Apple Home quick start
 
 1. Build (`matter/build.sh xiao_ble`, needs NCS v3.4.1 under `~/ncs`) or take a release UF2, double-tap
