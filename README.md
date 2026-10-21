@@ -13,12 +13,6 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 <p align="center"><img src="docs/matter-pairing-qr.png" width="180" alt="Matter pairing QR code"><br><code>MT:6FCJ142C00KA0648G00</code> · manual code 34970112332</p>
 
-**Status (2026-10-21):** both firmwares verified on the lamp. The Matter firmware is commissioned in
-Apple Home through a HomePod mini; on/off, brightness and colour temperature all reach the lamp with
-verified ACKs, including bursts of slider moves. Apple shows an "uncertified accessory" warning once
-(test vendor ID), then it behaves like any other light. The lamp only ever sends empty ACKs, so
-changes made with the original remote are not reflected back.
-
 ## Apple Home quick start
 
 1. Build (`matter/build.sh xiao_ble`, needs NCS v3.4.1 under `~/ncs`) or take a release UF2, double-tap
