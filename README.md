@@ -50,7 +50,23 @@ with `matter/build.sh xiao_ble` into `matter/build/xiao_ble/matter/zephyr/`.
 
 ## Flash
 
-Copy the UF2 onto the board's bootloader drive (double-tap RST on the XIAO), or program the hex over SWD with a J-Link; later updates go through the firmware's `DFU` / `halo dfu` command.
+UF2 boards (XIAO): double-tap RST, the board shows up as a USB drive, copy the image onto it. The
+board reboots into the new firmware as soon as the copy completes; later updates skip the button by
+sending `halo dfu` (Matter firmware) or `DFU` (USB firmware) on the serial port first.
+
+```sh
+# Linux: find the drive (label XIAO-SENSE), mount, copy, unmount
+lsblk -o NAME,LABEL,TRAN | grep XIAO
+sudo mount -o uid=$(id -u) /dev/sda /mnt/uf2        # /dev/sda as reported by lsblk
+cp matter/build/xiao_ble/matter/zephyr/zephyr.uf2 /mnt/uf2/ && sync
+sudo umount /mnt/uf2
+# macOS / Windows: drag zephyr.uf2 onto the XIAO-SENSE drive
+```
+
+`tools/uf2_update.sh [port] [uf2]` does the whole cycle for the Matter firmware. Boards with Nordic's
+DFU bootloader take `nrfutil device program --firmware <zip> --traits nordicDfu` (zip from
+`tools/make_dfu_zip.py`, cycle in `tools/dfu_update.sh`); any board can also be programmed from the
+hex over SWD with a J-Link.
 
 ## Use
 
