@@ -7,6 +7,9 @@
 
 #include <zephyr/shell/shell.h>
 
+#include <app/server/Server.h>
+#include <platform/CHIPDeviceLayer.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -102,6 +105,14 @@ static int cmd_crash(const struct shell *sh, size_t, char **)
 	return 0;
 }
 
+static int cmd_factoryreset(const struct shell *sh, size_t, char **)
+{
+	shell_print(sh, "factory reset: forgetting the Matter fabric and Thread network, rebooting");
+	chip::DeviceLayer::PlatformMgr().ScheduleWork(
+		[](intptr_t) { chip::Server::GetInstance().ScheduleFactoryReset(); }, 0);
+	return 0;
+}
+
 static int cmd_dfu(const struct shell *sh, size_t, char **)
 {
 	shell_print(sh, "rebooting into the UF2 bootloader");
@@ -115,6 +126,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(halo_cmds, SHELL_CMD(on, NULL, "Both lamps on", c
 			       SHELL_CMD(back, NULL, "Back lamp on|off", cmd_back),
 			       SHELL_CMD(last, NULL, "Result of the last frame sent", cmd_last),
 			       SHELL_CMD(crash, NULL, "Crash black box from the previous boot", cmd_crash),
+			       SHELL_CMD(factoryreset, NULL, "Matter factory reset (unpair) and reboot", cmd_factoryreset),
 			       SHELL_CMD(dfu, NULL, "Reboot into the UF2 bootloader", cmd_dfu),
 			       SHELL_CMD(off, NULL, "Both lamps off", cmd_off),
 			       SHELL_CMD(level, NULL, "Brightness 1..254", cmd_level),

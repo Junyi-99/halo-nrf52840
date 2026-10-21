@@ -186,7 +186,10 @@ colour temperature from the Home app all reached the lamp with verified ACKs.
   partition. A minimal Zephyr shell stays on USB CDC: `halo on|off|level N|temp MIREDS` drive the lamp
   directly, `halo last` shows the last frame's result and timeslot counters, `halo crash` the crash
   black box (fatal reason, pc, a stack scan, MPSL assert location), `halo front|back on|off` switch
-  one lamp, `halo dfu` reboots into the board's USB bootloader. `prj_debug.conf` (`-DFILE_SUFFIX=debug`)
+  one lamp, `halo factoryreset` unpairs (forgets the Matter fabric and Thread network), `halo dfu`
+  reboots into the board's USB bootloader. Status LED on the XIAO: blue blinking slowly = waiting to
+  be paired, blue fast = commissioning in progress, green for 5 s = joined; after each command a
+  green flash means the lamp ACKed, red means it did not. `prj_debug.conf` (`-DFILE_SUFFIX=debug`)
   is the same firmware with logging for diagnosis. Pairing uses the Matter test setup
   (passcode 20202021, discriminator 0xF00: manual code 34970112332; uncertified test vendor 0xFFF1,
   which Apple Home accepts after a warning).

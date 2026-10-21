@@ -69,6 +69,51 @@ bool sReady;	/* attribute writes before the server is up are restores, not comma
 unsigned sPid;
 
 K_SEM_DEFINE(sSyncSem, 0, 1);
+
+/* Status LED (XIAO: LED1 red, LED2 green, LED3 blue):
+ *   blue blinking slowly   waiting to be paired (BLE advertising)
+ *   blue blinking fast     a phone is connected, commissioning in progress
+ *   green for 5 s          joined the Thread network / provisioned
+ *   green / red flash      a frame was ACKed / not ACKed by the lamp
+ */
+void GreenOff(k_timer *)
+{
+	Nrf::PostTask([] { Nrf::GetBoard().GetLED(Nrf::DeviceLeds::LED2).Set(false); });
+}
+K_TIMER_DEFINE(sGreenOffTimer, GreenOff, nullptr);
+
+void StatusLedHandler()
+{
+	auto &board = Nrf::GetBoard();
+	auto &red = board.GetLED(Nrf::DeviceLeds::LED1);
+	auto &green = board.GetLED(Nrf::DeviceLeds::LED2);
+	auto &blue = board.GetLED(Nrf::DeviceLeds::LED3);
+
+	red.Set(false);
+	blue.Set(false);
+	switch (board.GetDeviceState()) {
+	case Nrf::DeviceState::DeviceDisconnected:
+	case Nrf::DeviceState::DeviceAdvertisingBLE:
+		blue.Blink(300, 300);
+		break;
+	case Nrf::DeviceState::DeviceConnectedBLE:
+		blue.Blink(80, 80);
+		break;
+	case Nrf::DeviceState::DeviceProvisioned:
+		green.Set(true);
+		k_timer_start(&sGreenOffTimer, K_SECONDS(5), K_NO_WAIT);
+		break;
+	}
+}
+
+void FlashResult(bool ack)
+{
+	auto &led = Nrf::GetBoard().GetLED(ack ? Nrf::DeviceLeds::LED2 : Nrf::DeviceLeds::LED1);
+
+	led.Set(true);
+	k_msleep(120);
+	led.Set(false);
+}
 K_THREAD_STACK_DEFINE(sHaloStack, 2048);
 struct k_thread sHaloThread;
 
@@ -125,6 +170,7 @@ void SendFrame(const char *what, uint8_t flags, uint8_t value)
 	sLast.value = value;
 	sLast.result = r;
 	sLast.count++;
+	FlashResult(r.ack);
 	LOG_INF("Halo %s %02X%02X: %s after %u attempt(s), rssi %d dBm%s [started %u tx %u rxto %u blocked %u nosig %u err %d txend %u us radiosig %u]",
 		what, flags, value, r.ack ? "ACK" : "no ACK", r.attempts, r.rssi_dbm,
 		r.energy && !r.ack ? " (reply heard)" : "", r.started, r.tx_done, r.rx_timeout, r.blocked,
@@ -273,7 +319,7 @@ CHIP_ERROR AppTask::Init()
 		return CHIP_NO_ERROR;
 	} }));
 
-	if (!Nrf::GetBoard().Init()) {
+	if (!Nrf::GetBoard().Init(nullptr, StatusLedHandler)) {
 		LOG_WRN("Board LEDs/buttons initialization failed (no buttons on this board is fine)");
 	}
 
