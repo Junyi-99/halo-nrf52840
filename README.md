@@ -15,8 +15,8 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 ## Apple Home quick start
 
-1. Build (`matter/build.sh xiao_ble`, needs NCS v3.4.1 under `~/ncs`) or take a release UF2, double-tap
-   RST on the XIAO and copy `zephyr.uf2` onto the `XIAO-SENSE` drive.
+1. Build (`matter/build.sh xiao_ble`) or take a release UF2, double-tap RST on the XIAO and copy
+   `zephyr.uf2` onto the `XIAO-SENSE` drive.
 2. Home app → + → Add Accessory → scan the QR above (or *More options…* → enter 3497-011-2332) →
    *Add Anyway* on the uncertified warning. Commissioning goes over Bluetooth LE, then the XIAO joins
    the border router's Thread network; about a minute.
@@ -31,8 +31,11 @@ the codes (`matter onboardingcodes ble`) and takes `halo on|off|level|temp` for 
 
 ## Build
 
-Zephyr v4.4.2 is installed under `~/zephyrproject` (narrow checkout: zephyr, cmsis, hal_nordic)
-with the Zephyr SDK 1.0.1 ARM toolchain in `~/zephyr-sdk-1.0.1` (this machine is aarch64).
+Prerequisites: a [Zephyr](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
+v4.4 workspace with the Zephyr SDK for the USB firmware; an
+[nRF Connect SDK](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation.html) v3.4.1
+workspace for the Matter firmware. The build scripts look for them in `~/zephyrproject` and `~/ncs`
+(override with `ZEPHYR_WORKSPACE`, `ZEPHYR_SDK_INSTALL_DIR`, `NCS_WORKSPACE`).
 
 ```sh
 ./build.sh xiao_ble                         # Seeed XIAO nRF52840 (UF2, app at 0x27000)
@@ -42,7 +45,8 @@ with the Zephyr SDK 1.0.1 ARM toolchain in `~/zephyr-sdk-1.0.1` (this machine is
 ./build.sh adafruit_feather_nrf52840        # Feather (UF2 variant)
 ```
 
-Outputs land in `build/<board>/zephyr/` as `zephyr.uf2` / `zephyr.hex`.
+Outputs land in `build/<board>/zephyr/` as `zephyr.uf2` / `zephyr.hex`. The Matter firmware builds
+with `matter/build.sh xiao_ble` into `matter/build/xiao_ble/matter/zephyr/`.
 
 ## Flash
 
