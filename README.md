@@ -4,13 +4,6 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 <p align="center"><img src="docs/apple-home-two-lights.jpeg" width="260" alt="The ScreenBar Halo in Apple Home as Mainlight and Backlight">&nbsp;&nbsp;<img src="docs/xiao-nrf52840.jpeg" width="300" alt="Seeed XIAO nRF52840"></p>
 
-| | `matter/` — Apple Home firmware | root — USB firmware |
-|---|---|---|
-| What it is | Matter over Thread: the ScreenBar's **front lamp and back lamp as two Color Temperature Lights**, each switchable on its own; brightness and colour temperature are shared by the lamp and stay in sync between the two | USB CDC serial controller, same line protocol as [halo-esp32s3](https://github.com/Junyi-99/halo-esp32s3), `halo_control.py` on the host |
-| Needs | XIAO nRF52840 + a Thread border router (HomePod mini, Apple TV 4K, …) | any nRF52840 board on USB |
-| SDK | nRF Connect SDK v3.4.1 | Zephyr v4.4.2 |
-| Pairing | fixed test code **3497-011-2332**, QR below | n/a |
-
 <p align="center"><img src="docs/matter-pairing-qr.png" width="180" alt="Matter pairing QR code"><br><code>MT:6FCJ142C00KA0648G00</code> · manual code 34970112332</p>
 
 ## Build
