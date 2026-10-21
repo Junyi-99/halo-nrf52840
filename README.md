@@ -13,22 +13,6 @@ Control a first-generation BenQ ScreenBar Halo from an nRF52840 (no external RF 
 
 <p align="center"><img src="docs/matter-pairing-qr.png" width="180" alt="Matter pairing QR code"><br><code>MT:6FCJ142C00KA0648G00</code> · manual code 34970112332</p>
 
-## Apple Home quick start
-
-1. Build (`matter/build.sh xiao_ble`) or take a release UF2, double-tap RST on the XIAO and copy
-   `zephyr.uf2` onto the `XIAO-SENSE` drive.
-2. Home app → + → Add Accessory → scan the QR above (or *More options…* → enter 3497-011-2332) →
-   *Add Anyway* on the uncertified warning. Commissioning goes over Bluetooth LE, then the XIAO joins
-   the border router's Thread network; about a minute.
-3. The lamp address is `CONFIG_HALO_LAMP_ADDRESS` in `matter/Kconfig` (default 16224CB1, change it
-   for your own lamp).
-
-Every board flashed with this firmware uses the same pairing code (Matter test discriminator 0xF00,
-passcode 20202021), so pair one board at a time. Already-paired boards do not need the code again:
-sharing with another app goes through the Home app's own pairing mode. Over USB the board also prints
-the codes (`matter onboardingcodes ble`) and takes `halo on|off|level|temp` for direct tests and
-`halo dfu` to reboot into the UF2 bootloader.
-
 ## Build
 
 Prerequisites: a [Zephyr](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
@@ -70,32 +54,40 @@ hex over SWD with a J-Link.
 
 ## Use
 
-Same protocol as halo-esp32s3, so its tool works unchanged (a copy is in `tools/`):
+Pairing with Apple Home (any Matter controller works the same way):
 
-```sh
-pip install pyserial
-python tools/halo_control.py --address 16224CB1 --mode back --brightness 50
-python tools/halo_control.py --mode front --brightness 100 --led on          # LED in the mode colour, green 1 s on ACK
-python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # same with a custom colour
-```
+1. Flash the Matter firmware (see Build and Flash). The blue LED starts blinking slowly: the board is
+   waiting to be paired.
+2. Home app → **+** → **Add Accessory** → scan the QR code above (or *More options…* → enter
+   **3497-011-2332**) → *Add Anyway* on the "uncertified accessory" warning. Commissioning goes over
+   Bluetooth LE (blue LED blinks fast), then the board joins the border router's Thread network (green
+   LED for 5 s). About a minute in total.
+3. Two lights appear, "Light" (front lamp) and "Light 2" (back lamp); rename them in the Home app.
+   Each switches on its own; brightness and colour temperature are shared by the lamp, so they stay
+   in sync between the two.
 
-Serial, newline terminated, type `HELP` for the full list:
+Board LED:
 
-```text
-HALO <address_hex> <mode 0-3> <brightness 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
-HALOTEMP <address_hex> <mode 0-3> <temperature 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
-  -> HALODONE <ACK|NO_ACK|RX_ERROR> <attempts> <payload_hex> <crc16> 0 <total_us> <turnaround_us> <ack_us> <ack_crc16>
-DIAG            last attempt: RSSI max/when, RSSI during the ACK, bit mismatches, raw bytes
-PHY NRF1M|BLE1M modulator (default NRF1M)
-```
+| LED | Meaning |
+|---|---|
+| blue, slow blink | waiting to be paired (Bluetooth LE advertising) |
+| blue, fast blink | a phone is connected, commissioning in progress |
+| green for 5 s | joined the Thread network, paired |
+| green flash after a command | the lamp acknowledged the frame |
+| red flash after a command | no acknowledgement (frames are retried three times) |
 
-`gain` maps to TX power: 0..10 → -40 -20 -16 -12 -8 -4 0 +2 +4 +6 +8 dBm. The tool's default 8 is
-+4 dBm; the measurements above were at 10 (+8 dBm) with the lamp a few metres away (ACK at -74 dBm).
+Notes: every board flashed with this firmware uses the same pairing code (Matter test
+discriminator 0xF00, passcode 20202021), so pair one board at a time. Sharing an already-paired
+board with another app goes through the Home app's own pairing mode. The lamp address is
+`CONFIG_HALO_LAMP_ADDRESS` in `matter/Kconfig` (default 16224CB1, change it for your own lamp). The
+lamp only ever sends empty acknowledgements, so changes made with the original remote are not
+reflected in the Home app.
 
 ## Details
 
-How the radio trick works (oversampled 1 Mbit/s GFSK, ACK decoding), the measurements, and the
-Matter over Thread design (MPSL timeslots, two endpoints, status LED, shell): [docs/DETAILS.md](docs/DETAILS.md).
+How the radio trick works (oversampled 1 Mbit/s GFSK, ACK decoding), the measurements, the Matter
+over Thread design (MPSL timeslots, two endpoints), and the USB firmware's host tool and serial
+protocol: [docs/DETAILS.md](docs/DETAILS.md).
 
 ## Acknowledgements
 

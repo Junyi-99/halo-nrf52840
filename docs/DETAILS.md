@@ -76,6 +76,35 @@ decoded still shows as a burst of energy ~20 dB above the noise floor.
 | `halo_control.py` both → off → front, 3 attempts | ACK, ACK (2nd attempt), ACK |
 | XIAO nRF52840, same test | 20/20 bursts at -63 dBm, 13/20 verified, tool ACK first try |
 
+## USB firmware: host tool and serial protocol
+
+Same protocol as halo-esp32s3, so its tool works unchanged (a copy is in `tools/`):
+
+```sh
+pip install pyserial
+python tools/halo_control.py --address 16224CB1 --mode back --brightness 50
+python tools/halo_control.py --mode front --brightness 100 --led on          # LED in the mode colour, green 1 s on ACK
+python tools/halo_control.py --mode front --brightness 100 --rgb 0,0,255     # same with a custom colour
+```
+
+Serial, newline terminated, type `HELP` for the full list:
+
+```text
+HALO <address_hex> <mode 0-3> <brightness 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
+HALOTEMP <address_hex> <mode 0-3> <temperature 0-100> <pid 0-3> <gain 0-10> <attempts 1-5>
+  -> HALODONE <ACK|NO_ACK|RX_ERROR> <attempts> <payload_hex> <crc16> 0 <total_us> <turnaround_us> <ack_us> <ack_crc16>
+DIAG            last attempt: RSSI max/when, RSSI during the ACK, bit mismatches, raw bytes
+PHY NRF1M|BLE1M modulator (default NRF1M)
+DFU             reboot into the board's USB bootloader
+```
+
+`gain` maps to TX power: 0..10 → -40 -20 -16 -12 -8 -4 0 +2 +4 +6 +8 dBm. The tool's default 8 is
++4 dBm; the measurements above were at 10 (+8 dBm) with the lamp a few metres away (ACK at -74 dBm).
+
+The Matter firmware has a USB shell of its own: `halo on|off`, `halo front|back on|off`,
+`halo level N`, `halo temp MIREDS`, `halo last` (result and timeslot counters of the last frame),
+`halo crash` (crash black box), `halo factoryreset` (unpair), `halo dfu` (reboot into the bootloader).
+
 ## Matter over Thread (`matter/`)
 
 The XIAO can also be a Matter **Color Temperature Light** on Thread, so the ScreenBar shows up in
