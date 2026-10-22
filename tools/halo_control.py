@@ -2,6 +2,7 @@
 """Send one command to a BenQ ScreenBar Halo through the controller board.
 Brightness 1..100 maps to raw 4C..FE; zero means off, not calibrated luminance.
 Colour temperature 0 (coldest)..100 (warmest) goes out as its own frame (HALOTEMP).
+--unpair talks to the Matter firmware instead: it forgets the Home pairing, not the lamp address.
 """
 import argparse
 import json
@@ -89,6 +90,10 @@ def parse_args():
     ap.add_argument('--rgb', metavar='R,G,B', default=argparse.SUPPRESS,
                     help='LED colour to use with --led on instead of the per-mode default, '
                          'each 0..255 (GPIO-only boards treat non-zero as on)')
+    ap.add_argument('--unpair', action='store_true',
+                    help='Matter firmware: forget the Matter fabric (Apple Home) and Thread network, '
+                         'then reboot into pairing mode; the lamp address is untouched. '
+                         'Remove the accessory in the Home app too')
     ap.add_argument('--port', metavar='DEV', default=DEFAULT_PORT,
                     help='ESP serial port')
     a = ap.parse_args()
@@ -148,8 +153,30 @@ def ack_flash(client, rgb):
     set_led(client, rgb)
 
 
+def unpair(port):
+    """Run `halo factoryreset` in the Matter firmware's shell; the board reboots right after."""
+    with serial.Serial(port, baudrate=115200, timeout=.5, write_timeout=3, exclusive=True) as p:
+        p.write(b'\r\nhalo factoryreset\r\n')
+        deadline = time.monotonic() + 5
+        seen = b''
+        try:
+            while time.monotonic() < deadline:
+                seen += p.read(256)
+                if b'forgetting' in seen:
+                    print('Unpaired: Matter fabric and Thread network cleared, board rebooting; '
+                          'blue slow blink means ready to pair again. '
+                          'Also remove the accessory in the Home app.')
+                    return
+        except serial.SerialException:
+            pass  # the port vanished because the board already rebooted
+    raise SystemExit('No reply from the Matter firmware shell; is this the Matter firmware on ' + port + '?')
+
+
 def main():
     a = parse_args()
+    if a.unpair:
+        unpair(a.port)
+        return
     pid = load_pid(getattr(a, 'pid', None))
     led = getattr(a, 'led', None)
     rgb = getattr(a, 'rgb', None) or LED_COLORS[a.mode]

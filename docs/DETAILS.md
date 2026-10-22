@@ -104,6 +104,8 @@ DFU             reboot into the board's USB bootloader
 The Matter firmware has a USB shell of its own: `halo on|off`, `halo front|back on|off`,
 `halo level N`, `halo temp MIREDS`, `halo last` (result and timeslot counters of the last frame),
 `halo crash` (crash black box), `halo factoryreset` (unpair), `halo dfu` (reboot into the bootloader).
+`python tools/halo_control.py --unpair [--port DEV]` runs `halo factoryreset` for you: it clears the
+Home (Matter) pairing and Thread network, not the lamp address. Also remove the accessory in the Home app.
 
 ## Matter over Thread (`matter/`)
 
