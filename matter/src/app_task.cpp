@@ -4,6 +4,8 @@
 #include "app/task_executor.h"
 #include "board/board.h"
 #include "clusters/identify.h"
+#include "ac_control.h"
+#include "env_sensor.h"
 #include "halo_radio_ts.h"
 
 #include <app-common/zap-generated/attributes/Accessors.h>
@@ -333,6 +335,8 @@ CHIP_ERROR AppTask::Init()
 	k_thread_name_set(&sHaloThread, "halo");
 
 	CHIP_ERROR err = Nrf::Matter::StartServer();
+	EnvSensor::Start();
+	AcControl::Start();
 
 	sReady = (err == CHIP_NO_ERROR);
 	return err;

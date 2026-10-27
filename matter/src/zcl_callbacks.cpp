@@ -1,3 +1,4 @@
+#include "ac_control.h"
 #include "app_task.h"
 
 #include <app-common/zap-generated/attributes/Accessors.h>
@@ -28,6 +29,8 @@ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath &a
 
 		memcpy(&mireds, value, sizeof(mireds));
 		AppTask::Instance().SetMireds(endpoint, mireds);
+	} else if (endpoint == AcControl::kThermostatEndpointId || endpoint == AcControl::kFanEndpointId) {
+		AcControl::OnAttributeChanged(attributePath, size, value);
 	}
 }
 

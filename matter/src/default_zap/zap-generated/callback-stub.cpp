@@ -45,6 +45,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId) {
   case app::Clusters::DiagnosticLogs::Id:
     emberAfDiagnosticLogsClusterInitCallback(endpoint);
     break;
+  case app::Clusters::FanControl::Id:
+    emberAfFanControlClusterInitCallback(endpoint);
+    break;
   case app::Clusters::GeneralCommissioning::Id:
     emberAfGeneralCommissioningClusterInitCallback(endpoint);
     break;
@@ -59,6 +62,9 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId) {
     break;
   case app::Clusters::Identify::Id:
     emberAfIdentifyClusterInitCallback(endpoint);
+    break;
+  case app::Clusters::IlluminanceMeasurement::Id:
+    emberAfIlluminanceMeasurementClusterInitCallback(endpoint);
     break;
   case app::Clusters::LevelControl::Id:
     emberAfLevelControlClusterInitCallback(endpoint);
@@ -78,8 +84,20 @@ void emberAfClusterInitCallback(EndpointId endpoint, ClusterId clusterId) {
   case app::Clusters::OperationalCredentials::Id:
     emberAfOperationalCredentialsClusterInitCallback(endpoint);
     break;
+  case app::Clusters::PressureMeasurement::Id:
+    emberAfPressureMeasurementClusterInitCallback(endpoint);
+    break;
+  case app::Clusters::RelativeHumidityMeasurement::Id:
+    emberAfRelativeHumidityMeasurementClusterInitCallback(endpoint);
+    break;
   case app::Clusters::SoftwareDiagnostics::Id:
     emberAfSoftwareDiagnosticsClusterInitCallback(endpoint);
+    break;
+  case app::Clusters::TemperatureMeasurement::Id:
+    emberAfTemperatureMeasurementClusterInitCallback(endpoint);
+    break;
+  case app::Clusters::Thermostat::Id:
+    emberAfThermostatClusterInitCallback(endpoint);
     break;
   case app::Clusters::ThreadNetworkDiagnostics::Id:
     emberAfThreadNetworkDiagnosticsClusterInitCallback(endpoint);
@@ -124,6 +142,11 @@ emberAfDiagnosticLogsClusterInitCallback(EndpointId endpoint) {
   (void)endpoint;
 }
 void __attribute__((weak))
+emberAfFanControlClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
 emberAfGeneralCommissioningClusterInitCallback(EndpointId endpoint) {
   // To prevent warning
   (void)endpoint;
@@ -145,6 +168,11 @@ emberAfGroupsClusterInitCallback(EndpointId endpoint) {
 }
 void __attribute__((weak))
 emberAfIdentifyClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
+emberAfIlluminanceMeasurementClusterInitCallback(EndpointId endpoint) {
   // To prevent warning
   (void)endpoint;
 }
@@ -179,7 +207,27 @@ emberAfOperationalCredentialsClusterInitCallback(EndpointId endpoint) {
   (void)endpoint;
 }
 void __attribute__((weak))
+emberAfPressureMeasurementClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
+emberAfRelativeHumidityMeasurementClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
 emberAfSoftwareDiagnosticsClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
+emberAfTemperatureMeasurementClusterInitCallback(EndpointId endpoint) {
+  // To prevent warning
+  (void)endpoint;
+}
+void __attribute__((weak))
+emberAfThermostatClusterInitCallback(EndpointId endpoint) {
   // To prevent warning
   (void)endpoint;
 }

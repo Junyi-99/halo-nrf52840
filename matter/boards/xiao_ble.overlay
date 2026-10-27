@@ -28,11 +28,58 @@
 	};
 };
 
-/* Unused peripherals off */
-&i2c0 {
-	status = "disabled";
+/* AHT20 temperature/humidity sensor on D4 (SDA) / D5 (SCL), reported over Matter. */
+&i2c1 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	aht20: aht20@38 {
+		compatible = "aosong,aht20";
+		reg = <0x38>;
+	};
+
+	/* BMP280 pressure sensor; the bme280 driver identifies and supports it. */
+	bmp280: bmp280@77 {
+		compatible = "bosch,bme280";
+		reg = <0x77>;
+	};
 };
 
+/* Second I2C bus on D2 (SDA, P0.28) / D3 (SCL, P0.29). The Sense board's IMU also
+ * wires to i2c0 (P0.07/P0.27), but that target is not used here, so the instance is free.
+ */
+&pinctrl {
+	i2c0_d2d3_default: i2c0_d2d3_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 28)>,
+				<NRF_PSEL(TWIM_SCL, 0, 29)>;
+			bias-pull-up;
+		};
+	};
+
+	i2c0_d2d3_sleep: i2c0_d2d3_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 28)>,
+				<NRF_PSEL(TWIM_SCL, 0, 29)>;
+			low-power-enable;
+		};
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	pinctrl-0 = <&i2c0_d2d3_default>;
+	pinctrl-1 = <&i2c0_d2d3_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	opt3001: opt3001@44 {
+		compatible = "ti,opt3001";
+		reg = <0x44>;
+	};
+};
+
+/* Unused peripherals off */
 &spi2 {
 	status = "disabled";
 };

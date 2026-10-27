@@ -2,11 +2,16 @@
  * radio path (timeslots, ACK) from the USB console.
  */
 #include "app_task.h"
+#include "ac_link.h"
 #include "crash_box.h"
+#include "env_sensor.h"
 #include "halo_radio_ts.h"
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
 #include <zephyr/shell/shell.h>
 
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app/server/Server.h>
 #include <platform/CHIPDeviceLayer.h>
 
@@ -105,6 +110,103 @@ static int cmd_crash(const struct shell *sh, size_t, char **)
 	return 0;
 }
 
+static int cmd_env(const struct shell *sh, size_t, char **)
+{
+	int16_t t;
+	uint16_t h;
+
+	uint32_t lux;
+
+	if (!EnvSensor::Latest(t, h)) {
+		shell_print(sh, "no AHT20 reading yet (sensor missing or not wired to D4/D5)");
+	} else {
+		shell_print(sh, "temperature %d.%02d C, humidity %u.%02u %%RH", t / 100, abs(t) % 100, h / 100,
+			    h % 100);
+	}
+	int16_t hPa;
+
+	if (!EnvSensor::LatestPressure(hPa)) {
+		shell_print(sh, "no BMP280 reading yet (sensor missing or not wired to D4/D5)");
+	} else {
+		shell_print(sh, "pressure %d hPa", hPa);
+	}
+	if (!EnvSensor::LatestLux(lux)) {
+		shell_print(sh, "no OPT3001 reading yet (sensor missing or not wired to D2/D3)");
+	} else {
+		shell_print(sh, "illuminance %u.%02u lux", lux / 100, lux % 100);
+	}
+	return 0;
+}
+
+/* "halo i2c": scan both buses (bus 0 = D2/D3, bus 1 = D4/D5) for responding addresses. */
+static int cmd_i2c(const struct shell *sh, size_t, char **)
+{
+	static const struct device *const buses[] = {DEVICE_DT_GET(DT_NODELABEL(i2c0)), DEVICE_DT_GET(DT_NODELABEL(i2c1))};
+	static const char *const pins[] = {"D2/D3", "D4/D5"};
+
+	for (int b = 0; b < 2; b++) {
+		int found = 0;
+
+		if (!device_is_ready(buses[b])) {
+			shell_print(sh, "i2c%d (%s): not ready", b, pins[b]);
+			continue;
+		}
+		shell_fprintf(sh, SHELL_NORMAL, "i2c%d (%s):", b, pins[b]);
+		for (uint16_t a = 0x08; a < 0x78; a++) {
+			if (i2c_write(buses[b], NULL, 0, a) == 0) {
+				shell_fprintf(sh, SHELL_NORMAL, " 0x%02X", a);
+				found++;
+			}
+		}
+		shell_print(sh, "%s", found ? "" : " no devices");
+	}
+	return 0;
+}
+
+/* "halo matter": what the Matter data model currently holds for the sensor endpoints. */
+static int cmd_matter(const struct shell *sh, size_t, char **)
+{
+	using namespace chip::app::Clusters;
+	chip::app::DataModel::Nullable<int16_t> t, p;
+	chip::app::DataModel::Nullable<uint16_t> h, l;
+	chip::Protocols::InteractionModel::Status st[4];
+
+	chip::DeviceLayer::PlatformMgr().LockChipStack();
+	st[0] = TemperatureMeasurement::Attributes::MeasuredValue::Get(EnvSensor::kTemperatureEndpointId, t);
+	st[1] = RelativeHumidityMeasurement::Attributes::MeasuredValue::Get(EnvSensor::kHumidityEndpointId, h);
+	st[2] = IlluminanceMeasurement::Attributes::MeasuredValue::Get(EnvSensor::kIlluminanceEndpointId, l);
+	st[3] = PressureMeasurement::Attributes::MeasuredValue::Get(EnvSensor::kPressureEndpointId, p);
+	chip::DeviceLayer::PlatformMgr().UnlockChipStack();
+
+	shell_print(sh, "ep3 temperature %d (0.01 C)  status %d", t.ValueOr(0), static_cast<int>(st[0]));
+	shell_print(sh, "ep4 humidity    %u (0.01 %%)  status %d", h.ValueOr(0), static_cast<int>(st[1]));
+	shell_print(sh, "ep5 illuminance %u (10000*log10(lux)+1)  status %d", l.ValueOr(0), static_cast<int>(st[2]));
+	shell_print(sh, "ep6 pressure    %d (hPa)  status %d", p.ValueOr(0), static_cast<int>(st[3]));
+	return 0;
+}
+
+/* "halo ac <text command>": send a command to the AC-IR blaster over BLE, e.g. "halo ac set on 25 auto". */
+static int cmd_ac(const struct shell *sh, size_t argc, char **argv)
+{
+	char line[48] = "";
+
+	if (argc < 2) {
+		shell_print(sh, "usage: halo ac set on|off <16..30> <0..4|auto>   (also: power, temp, fan, mode)");
+		return -EINVAL;
+	}
+	for (size_t i = 1; i < argc; i++) {
+		strncat(line, argv[i], sizeof(line) - strlen(line) - 1);
+		if (i + 1 < argc) {
+			strncat(line, " ", sizeof(line) - strlen(line) - 1);
+		}
+	}
+	shell_print(sh, "sending \"%s\" to AC-IR ...", line);
+	AcLink::Result r = AcLink::Send(line);
+
+	shell_print(sh, "result: %s (detail %d)", AcLink::ResultName(r), AcLink::LastError());
+	return 0;
+}
+
 static int cmd_factoryreset(const struct shell *sh, size_t, char **)
 {
 	shell_print(sh, "factory reset: forgetting the Matter fabric and Thread network, rebooting");
@@ -126,6 +228,10 @@ SHELL_STATIC_SUBCMD_SET_CREATE(halo_cmds, SHELL_CMD(on, NULL, "Both lamps on", c
 			       SHELL_CMD(back, NULL, "Back lamp on|off", cmd_back),
 			       SHELL_CMD(last, NULL, "Result of the last frame sent", cmd_last),
 			       SHELL_CMD(crash, NULL, "Crash black box from the previous boot", cmd_crash),
+			       SHELL_CMD(i2c, NULL, "Scan the two I2C buses", cmd_i2c),
+			       SHELL_CMD(ac, NULL, "Send a text command to the AC-IR blaster over BLE", cmd_ac),
+			       SHELL_CMD(matter, NULL, "Sensor attribute values in the Matter data model", cmd_matter),
+			       SHELL_CMD(env, NULL, "Latest AHT20, BMP280 and OPT3001 readings", cmd_env),
 			       SHELL_CMD(factoryreset, NULL, "Matter factory reset (unpair) and reboot", cmd_factoryreset),
 			       SHELL_CMD(dfu, NULL, "Reboot into the UF2 bootloader", cmd_dfu),
 			       SHELL_CMD(off, NULL, "Both lamps off", cmd_off),

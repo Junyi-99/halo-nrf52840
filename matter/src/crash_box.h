@@ -16,6 +16,7 @@ struct crash_record {
 	uint32_t mpsl_line;
 	uint32_t trace[24];	/* code addresses found on the faulting thread's stack */
 	uint32_t trace_count;
+	uint32_t reported;	/* set once the post-crash boot hold has been served */
 };
 
 extern struct crash_record crash_box;

@@ -28,6 +28,9 @@ target_sources(app PRIVATE
   src/halo_radio_ts.c
   src/halo_shell.cpp
   src/crash_box.c
+  src/env_sensor.cpp
+  src/ac_link.cpp
+  src/ac_control.cpp
   ${CHIP_ROOT}/src/app/persistence/DeferredAttributePersistenceProvider.cpp
 )
 

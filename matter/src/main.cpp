@@ -19,6 +19,7 @@ LOG_MODULE_REGISTER(app, CONFIG_CHIP_APP_LOG_LEVEL);
 extern "C" void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
 {
 	crash_box.magic = CRASH_BOX_MAGIC;
+	crash_box.reported = 0;
 	crash_box.reason = reason;
 	crash_box.pc = esf ? esf->basic.pc : 0;
 	crash_box.lr = esf ? esf->basic.lr : 0;
@@ -55,8 +56,11 @@ int main()
 
 	/* The console is USB CDC: give a host a few seconds to open the port. After
 	 * a crash wait much longer, so a boot loop leaves time to read "halo crash".
+	 * The record survives later warm reboots (it stays readable), but only the
+	 * first boot after the crash is held.
 	 */
-	int wait_ticks = crash_box.magic == CRASH_BOX_MAGIC ? 600 : 80;
+	bool fresh_crash = crash_box.magic == CRASH_BOX_MAGIC && !crash_box.reported;
+	int wait_ticks = fresh_crash ? 300 : 80;
 
 	for (int i = 0; i < wait_ticks; i++) {
 		uint32_t dtr = 0;
@@ -69,13 +73,19 @@ int main()
 
 	/* A recorded crash stays in crash_box for the "halo crash" shell command;
 	 * a clean power-up leaves random RAM, which the magic value filters out.
-	 * After a crash hold the stack for 30 s so a boot loop can be inspected.
+	 * After a crash keep the stack held until 30 s after boot so a boot loop can
+	 * be inspected.
 	 */
 	if (crash_box.magic != CRASH_BOX_MAGIC) {
 		crash_box.mpsl_file[0] = 0;
 		crash_box.mpsl_line = 0;
-	} else {
-		k_msleep(30000);
+	} else if (fresh_crash) {
+		crash_box.reported = 1;
+		int64_t left = 30000 - k_uptime_get();
+
+		if (left > 0) {
+			k_msleep(left);
+		}
 	}
 
 	CHIP_ERROR err = AppTask::Instance().StartApp();

@@ -87,6 +87,30 @@ discriminator 0xF00, passcode 20202021), so pair one board at a time. Sharing an
 board with another app goes through the Home app's own pairing mode. The lamp only ever sends empty
 acknowledgements, so changes made with the original remote are not reflected in the Home app.
 
+## Extras: sensors and an air conditioner relay
+
+The Matter firmware also exposes, on the XIAO nRF52840 (Sense):
+
+| Matter endpoint | Source |
+|---|---|
+| 3 temperature, 4 humidity | AHT20 on I2C `i2c1` (D4 = SDA, D5 = SCL) |
+| 5 illuminance | OPT3001 on I2C `i2c0` (D2 = SDA, D3 = SCL) |
+| 6 pressure | BMP280 on `i2c1` (Apple Home does not show pressure sensors) |
+| 7 thermostat (cooling only), 8 fan | forwarded over BLE to an ESP32-C3 infrared blaster |
+
+The thermostat and fan do not talk to the air conditioner directly: a change in the Home app is
+debounced (0.7 s) and sent once as `set on|off <temp> <fan>` to the BLE peripheral `AC-IR` from
+[esp32c3-ac-ir](https://github.com/Junyi-99/esp32c3-ac-ir), which turns it into an infrared frame.
+The XIAO connects on demand and disconnects after each command. The C3's Bluetooth address is a
+constant in `matter/src/ac_link.cpp`; change it for your own board.
+
+USB serial shell helpers: `halo env` (sensor readings), `halo matter` (attribute values in the data
+model), `halo i2c` (scan both buses), `halo ac set on 25 auto` (send a command to AC-IR).
+
+After changing `matter/src/default_zap/halo_light.zap`, regenerate **both** `zap-generated/` and
+`halo_light.matter` (the codegen for the static cluster tables is built from the `.matter` file);
+a stale `.matter` makes the firmware abort at boot.
+
 ## Details
 
 How the radio trick works (oversampled 1 Mbit/s GFSK, ACK decoding), the measurements, the Matter

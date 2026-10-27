@@ -37,7 +37,13 @@ void MatterWiFiNetworkDiagnosticsPluginServerInitCallback();
 void MatterAdministratorCommissioningPluginServerInitCallback();
 void MatterOperationalCredentialsPluginServerInitCallback();
 void MatterGroupKeyManagementPluginServerInitCallback();
+void MatterThermostatPluginServerInitCallback();
+void MatterFanControlPluginServerInitCallback();
 void MatterColorControlPluginServerInitCallback();
+void MatterIlluminanceMeasurementPluginServerInitCallback();
+void MatterTemperatureMeasurementPluginServerInitCallback();
+void MatterPressureMeasurementPluginServerInitCallback();
+void MatterRelativeHumidityMeasurementPluginServerInitCallback();
 
 #define MATTER_PLUGINS_INIT                                                    \
   MatterIdentifyPluginServerInitCallback();                                    \
@@ -58,4 +64,10 @@ void MatterColorControlPluginServerInitCallback();
   MatterAdministratorCommissioningPluginServerInitCallback();                  \
   MatterOperationalCredentialsPluginServerInitCallback();                      \
   MatterGroupKeyManagementPluginServerInitCallback();                          \
-  MatterColorControlPluginServerInitCallback();
+  MatterThermostatPluginServerInitCallback();                                  \
+  MatterFanControlPluginServerInitCallback();                                  \
+  MatterColorControlPluginServerInitCallback();                                \
+  MatterIlluminanceMeasurementPluginServerInitCallback();                      \
+  MatterTemperatureMeasurementPluginServerInitCallback();                      \
+  MatterPressureMeasurementPluginServerInitCallback();                         \
+  MatterRelativeHumidityMeasurementPluginServerInitCallback();
